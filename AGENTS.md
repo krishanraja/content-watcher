@@ -1,5 +1,16 @@
 # Video Compression Engine
 
+<!-- north-star:start -->
+## North Star: read it first, every session
+
+This repository's North Star is [`docs/NORTH_STAR.md`](docs/NORTH_STAR.md): an ambition Krish set that is not reached yet.
+
+- Read it before any work, every session.
+- Before you start, say which part of it the task moves. If it moves nothing, say so first and let Krish decide.
+- Prefer the work that moves it furthest, and close by noting what moved.
+- Only Krish changes it.
+<!-- north-star:end -->
+
 When a user asks to compress a video, including the phrase "Need to compress a video", use the repository skill at `.agents/skills/video-compression/SKILL.md`.
 
 The user-facing workflow is more important than code changes. Do not edit this engine unless the user asks to change the engine itself. For an ordinary compression request, guide the user in chat, run the local CLI, verify every output, and return clickable absolute paths.
