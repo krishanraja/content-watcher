@@ -8,6 +8,8 @@ from pathlib import Path
 from ..post import IMAGE_EXT, Post, VIDEO_EXT
 from .base import FetchFailed, has_audio, load_json, run_tool
 
+QUALITY = "bv*[height<=720]+ba/b[height<=720]/bv*+ba/b"
+
 AUTHOR_KEYS = {
     "instagram": ("channel", "uploader_id", "uploader"),
     "tiktok": ("uploader", "channel", "creator"),
@@ -42,13 +44,15 @@ def fetch(url: str, platform: str, folder: Path, *, captions: str | None = None,
     args: list[str | Path] = [
         "--no-progress", "--no-playlist", "--no-warnings", "--socket-timeout", "30", "--retries", "3",
         "--max-filesize", "1500M", "--merge-output-format", "mp4", "--write-info-json", "-o", template,
+        # 720p is plenty for study, smaller and faster (Krish, 2026-10-24: "I never really need to download a
+        # high-quality video when I'm doing this job").
+        "-f", QUALITY,
     ]
     if captions == "all":
         args += ["--write-subs", "--sub-langs", "all,-live_chat", "--sub-format", "vtt/srt/best"]
     elif captions == "youtube":
         # The language spoken, never YouTube's machine translation (FETCH_METHODS.md, YouTube step 2).
-        args += ["--write-subs", "--write-auto-subs", "--sub-langs", ".*-orig", "--sub-format", "vtt/best",
-                 "-f", "bv*[height<=1080]+ba/b", "-t", "sleep"]
+        args += ["--write-subs", "--write-auto-subs", "--sub-langs", ".*-orig", "--sub-format", "vtt/best", "-t", "sleep"]
     if extra:
         args += extra
     if cookies_profile:

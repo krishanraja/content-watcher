@@ -22,6 +22,11 @@ ACTORS = {
     "instagram_reel": ("apify~instagram-reel-scraper", 0.01),
     "instagram_post": ("apify~instagram-scraper", 0.01),
     "tiktok": ("clockworks~tiktok-video-scraper", 0.01),
+    "youtube_transcript": ("johnvc~YoutubeTranscripts", 0.01),
+    # $0.02 a minute at 720p; a Short is under three minutes (FETCH_METHODS.md, YouTube step 9).
+    "youtube_short_video": ("marielise.dev~youtube-video-downloader", 0.06),
+    "linkedin_harvest": ("harvestapi~linkedin-profile-posts", 0.005),
+    "linkedin_supreme": ("supreme_coder~linkedin-post", 0.005),
 }
 
 
@@ -265,4 +270,124 @@ def fetch(url: str, platform: str, folder: Path, config: Config, *, actor_key: s
             post.audio = download(music, folder / f"{platform}_{post_id}_sound{ext_from(music, '.mp3')}", opener=opener)
         except FetchFailed:
             post.audio = None
+    return post
+
+
+def _posted(item: dict) -> str | None:
+    posted = item.get("postedAtISO") or item.get("postedAt")
+    if isinstance(posted, dict):
+        posted = posted.get("date") or posted.get("timestamp")
+    return str(posted) if posted else None
+
+
+def linkedin_parts(item: dict) -> dict:
+    """A LinkedIn post from harvestapi/linkedin-profile-posts or supreme_coder/linkedin-post (FETCH_METHODS.md,
+    LinkedIn step 3). Field names come from each actor's page; the first approved run confirms them."""
+    _item_error(item)
+    text = item.get("content") or item.get("text") or ""
+    if not str(text).strip():
+        raise FetchFailed("other", "apify_item_error")
+    author = item.get("author") or {}
+    if isinstance(author, str):
+        author = {"name": author}
+    images = [img.get("url") if isinstance(img, dict) else img for img in item.get("postImages") or item.get("images") or []]
+    video = None
+    streams = (((item.get("linkedinVideo") or {}).get("videoPlayMetadata") or {}).get("progressiveStreams") or [])
+    if streams:
+        best = max(streams, key=lambda st: (st.get("height") or 0, st.get("bitrate") or 0))
+        if (best.get("height") or 0) > 720:
+            smaller = [st for st in streams if (st.get("height") or 0) <= 720]
+            best = max(smaller, key=lambda st: st.get("height") or 0) if smaller else best
+        locations = best.get("streamingLocations") or []
+        video = (locations[0].get("url") if locations else None) or best.get("url")
+    document = item.get("document") or {}
+    engagement = item.get("engagement") or {}
+    counts = {}
+    for name, value in (("likes", engagement.get("likes", item.get("numLikes"))),
+                        ("comments", engagement.get("comments", item.get("numComments"))),
+                        ("shares", engagement.get("shares", item.get("numShares")))):
+        if isinstance(value, int):
+            counts[name] = value
+    return {
+        "text": str(text).strip(),
+        "author": author.get("name"),
+        "posted_at": _posted(item),
+        "images": [url for url in images if url],
+        "video": video,
+        "pdf": document.get("transcribedDocumentUrl"),
+        "counts": counts,
+    }
+
+
+def fetch_linkedin(url: str, post_id: str | None, folder: Path, config: Config, *, actor_key: str, opener=None) -> Post:
+    from .linkedin_page import as_markdown
+
+    actor, estimate = ACTORS[actor_key]
+    allowed(config, estimate)
+    record_spend(estimate)
+    if actor_key == "linkedin_harvest":
+        payload = {"targetUrls": [url], "maxPosts": 1, "scrapeComments": False, "scrapeReactions": False}
+    else:
+        payload = {"urls": [url], "deepScrape": True, "fetchDocumentDetails": True, "numComments": 0, "numLikes": 0}
+    items = run_actor(actor, payload, opener=opener)
+    if not items:
+        raise FetchFailed("other", "apify_item_error")
+    found = linkedin_parts(items[0])
+    ident = post_id or "post"
+    post = Post("linkedin", url, ident, found["author"], found["posted_at"], found["text"], found["counts"],
+                method=f"apify_{actor_key}")
+    text_file = folder / f"linkedin_{ident}.md"
+    text_file.write_text(as_markdown(post), encoding="utf-8")
+    post.media = [text_file]
+    for index, image_url in enumerate(found["images"][:20], start=1):
+        post.media.append(download(image_url, folder / f"linkedin_{ident}_{index:02d}.jpg", opener=opener))
+    if found["video"]:
+        post.media.append(download(found["video"], folder / f"linkedin_{ident}.mp4", opener=opener, timeout=300))
+    elif actor_key == "linkedin_harvest" and "video" in str(items[0]).lower() and not found["images"]:
+        raise FetchFailed("other", "apify_no_video")  # a video post with no file: the next actor reads video
+    if found["pdf"]:
+        post.media.append(download(found["pdf"], folder / f"linkedin_{ident}.pdf", opener=opener, timeout=120))
+    post.shape = "text"
+    return post
+
+
+def _first_url(item, depth: int = 0) -> str | None:
+    """The downloadable file in an actor's item, wherever the actor put it (the field name is read off the first run)."""
+    if depth > 3:
+        return None
+    if isinstance(item, str):
+        return item if item.startswith("http") and (".mp4" in item or "download" in item or "video" in item) else None
+    if isinstance(item, dict):
+        for key in ("downloadUrl", "download_url", "videoUrl", "video_url", "fileUrl", "file_url", "url", "mediaUrl"):
+            value = item.get(key)
+            if isinstance(value, str) and value.startswith("http"):
+                return value
+        for value in item.values():
+            found = _first_url(value, depth + 1)
+            if found:
+                return found
+    if isinstance(item, list):
+        for value in item:
+            found = _first_url(value, depth + 1)
+            if found:
+                return found
+    return None
+
+
+def fetch_youtube_short(url: str, video_id: str, folder: Path, config: Config, meta: dict, *, opener=None) -> Post:
+    """The paid backstop for a YouTube Short's file, about two cents, under the standing cap."""
+    actor, estimate = ACTORS["youtube_short_video"]
+    allowed(config, estimate)
+    record_spend(estimate)
+    items = run_actor(actor, {"urls": [url], "quality": "720p", "format": "mp4"}, opener=opener)
+    if not items:
+        raise FetchFailed("other", "apify_item_error")
+    _item_error(items[0])
+    file_url = _first_url(items[0])
+    if not file_url:
+        raise FetchFailed("other", "apify_no_media")
+    post = Post("youtube", url, video_id, meta.get("author_name") or items[0].get("channel"),
+                items[0].get("upload_date"), meta.get("title") or items[0].get("title"), method="apify_youtube_short")
+    post.media = [download(file_url, folder / f"youtube_{video_id}.mp4", opener=opener, timeout=300)]
+    post.shape = "video"
     return post

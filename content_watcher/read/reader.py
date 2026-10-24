@@ -347,6 +347,34 @@ def read_text(path: Path, *, post: Post | None = None) -> Reading:
     return Reading(sha, "text", platform, post.url if post else meta.get("link"), data, render_md(data))
 
 
+def read_document(path: Path, *, post: Post | None = None, workdir: Path | None = None, max_pages: int = 30) -> Reading:
+    """A PDF (a LinkedIn document post): its text, and each page read as a slide (layout, words, colours)."""
+    sha = tools.sha256_file(path)
+    data = _base(path, "document", post, sha)
+    work = Path(workdir or tempfile.mkdtemp(prefix="cw-read-"))
+    work.mkdir(parents=True, exist_ok=True)
+    pdftotext, pdftoppm = tools.which("pdftotext"), tools.which("pdftoppm")
+    body = ""
+    if pdftotext:
+        ran = tools.run([pdftotext, "-layout", path, "-"], timeout=120)
+        body = ran.stdout.strip() if ran.returncode == 0 else ""
+    else:
+        data["unmeasured"].append("document_text")
+    pages = []
+    if pdftoppm:
+        prefix = work / f"{sha[:12]}_page"
+        tools.run([pdftoppm, "-png", "-r", "80", "-l", str(max_pages), path, prefix], timeout=300)
+        for index, image in enumerate(sorted(work.glob(f"{sha[:12]}_page*.png")), start=1):
+            slide = read_image(image, index=index, workdir=work).read["slide"]
+            pages.append(slide)
+    else:
+        data["unmeasured"].append("document_pages")
+    data["document"] = {"page_count": len(pages) or None, "text": body, "pages": pages,
+                        "word_count": len(body.split())}
+    data["words_text"] = ""
+    return Reading(sha, "document", post.platform if post else "own", post.url if post else None, data, render_md(data))
+
+
 def read_post(folder: Path, *, out: Path | None = None, whisper_model: str | None = None) -> list[Reading]:
     """One reading per file in a fetched post; the first file's reading covers the whole post."""
     post = Post.load(folder)
@@ -364,6 +392,8 @@ def read_post(folder: Path, *, out: Path | None = None, whisper_model: str | Non
                 reading = read_image(media, post=post, index=index, workdir=work)
             elif kind == "text":
                 reading = read_text(media, post=post)
+            elif kind == "document":
+                reading = read_document(media, post=post, workdir=work)
             else:
                 continue
             reading.shape = shape if shape in ("carousel",) else reading.shape
@@ -405,7 +435,7 @@ def read_path(path: Path, *, out: Path, whisper_model: str | None = None) -> lis
             return read_post(path, out=out, whisper_model=whisper_model)
         readings = []
         for child in sorted(path.iterdir()):
-            if child.is_file() and kind_of(child) in ("video", "image", "text"):
+            if child.is_file() and kind_of(child) in ("video", "image", "text", "document"):
                 readings.extend(read_path(child, out=out, whisper_model=whisper_model))
         return readings
     kind = kind_of(path)
@@ -416,6 +446,8 @@ def read_path(path: Path, *, out: Path, whisper_model: str | None = None) -> lis
             reading = read_image(path, workdir=Path(tmp))
         elif kind == "text":
             reading = read_text(path)
+        elif kind == "document":
+            reading = read_document(path, workdir=Path(tmp))
         elif kind == "audio":
             heard = audio.transcribe(path, model_size=whisper_model)
             sha = tools.sha256_file(path)

@@ -1,0 +1,11 @@
+# cobalt: the open-source "paste a link, pick a quality" downloader, run privately on this computer so no third
+# party sees the links. content-watch uses it as a free fallback for every platform once
+# `content-watch config --cobalt-url http://localhost:9000` is set.
+services:
+  cobalt:
+    image: ghcr.io/imputnet/cobalt:11
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"
+    environment:
+      API_URL: "http://localhost:9000/"
