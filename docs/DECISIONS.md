@@ -74,3 +74,12 @@ So: every chain carries every working step from `docs/FETCH_METHODS.md`, plus th
 answered a live test (TikWM, Tikmate) and a self-hosted cobalt for every platform; downloads are capped at 720p; and
 when no file can be had, the words are filed as a text card. The chains and what was tested: `docs/FALLBACKS.md`.
 This is also his agreement to TikWM, which the research held back until he agreed.
+
+## 2026-10-24: Instagram and YouTube Shorts come first
+
+**Ruling (Krish, 2026-10-24): "Instagram and YouTube Shorts are the main ones, you need to find a reliable way".**
+
+So: Instagram starts with its own embed player, which answers logged out and carries the post's data (tested live),
+and ends with the cover picture and caption so a link never comes to nothing; YouTube Shorts get the home computers'
+full setup (Deno and the bgutil token helper, started by the installer) and a paid Apify backstop of about $0.02 a
+Short under the $5 cap. Details: `docs/FALLBACKS.md`.

@@ -23,6 +23,8 @@ ACTORS = {
     "instagram_post": ("apify~instagram-scraper", 0.01),
     "tiktok": ("clockworks~tiktok-video-scraper", 0.01),
     "youtube_transcript": ("johnvc~YoutubeTranscripts", 0.01),
+    # $0.02 a minute at 720p; a Short is under three minutes (FETCH_METHODS.md, YouTube step 9).
+    "youtube_short_video": ("marielise.dev~youtube-video-downloader", 0.06),
     "linkedin_harvest": ("harvestapi~linkedin-profile-posts", 0.005),
     "linkedin_supreme": ("supreme_coder~linkedin-post", 0.005),
 }
@@ -346,4 +348,46 @@ def fetch_linkedin(url: str, post_id: str | None, folder: Path, config: Config, 
     if found["pdf"]:
         post.media.append(download(found["pdf"], folder / f"linkedin_{ident}.pdf", opener=opener, timeout=120))
     post.shape = "text"
+    return post
+
+
+def _first_url(item, depth: int = 0) -> str | None:
+    """The downloadable file in an actor's item, wherever the actor put it (the field name is read off the first run)."""
+    if depth > 3:
+        return None
+    if isinstance(item, str):
+        return item if item.startswith("http") and (".mp4" in item or "download" in item or "video" in item) else None
+    if isinstance(item, dict):
+        for key in ("downloadUrl", "download_url", "videoUrl", "video_url", "fileUrl", "file_url", "url", "mediaUrl"):
+            value = item.get(key)
+            if isinstance(value, str) and value.startswith("http"):
+                return value
+        for value in item.values():
+            found = _first_url(value, depth + 1)
+            if found:
+                return found
+    if isinstance(item, list):
+        for value in item:
+            found = _first_url(value, depth + 1)
+            if found:
+                return found
+    return None
+
+
+def fetch_youtube_short(url: str, video_id: str, folder: Path, config: Config, meta: dict, *, opener=None) -> Post:
+    """The paid backstop for a YouTube Short's file, about two cents, under the standing cap."""
+    actor, estimate = ACTORS["youtube_short_video"]
+    allowed(config, estimate)
+    record_spend(estimate)
+    items = run_actor(actor, {"urls": [url], "quality": "720p", "format": "mp4"}, opener=opener)
+    if not items:
+        raise FetchFailed("other", "apify_item_error")
+    _item_error(items[0])
+    file_url = _first_url(items[0])
+    if not file_url:
+        raise FetchFailed("other", "apify_no_media")
+    post = Post("youtube", url, video_id, meta.get("author_name") or items[0].get("channel"),
+                items[0].get("upload_date"), meta.get("title") or items[0].get("title"), method="apify_youtube_short")
+    post.media = [download(file_url, folder / f"youtube_{video_id}.mp4", opener=opener, timeout=300)]
+    post.shape = "video"
     return post

@@ -75,6 +75,22 @@ if ($CheckOnly) { Write-Host ""; Write-Host "Everything required is here. Run ag
 if ($LASTEXITCODE -ne 0) { Write-Host "pip install failed; nothing was registered."; exit 1 }
 & $Python $PythonVersion -m content_watcher config --filing drive --video-inspiration "$VideoInspiration" --cold-ideas "$ColdIdeas" | Out-Null
 
+# 6b. YouTube's token helper (bgutil) and, optionally, cobalt, when Docker is here. Both listen on this machine only.
+$docker = Get-Command docker -ErrorAction SilentlyContinue
+if ($docker) {
+  $running = (docker ps --format "{{.Names}}" 2>$null)
+  if ($running -notcontains "bgutil-provider") {
+    docker rm -f bgutil-provider 2>$null | Out-Null
+    docker run --name bgutil-provider -d --init --restart unless-stopped -p 127.0.0.1:4416:4416 brainicism/bgutil-ytdlp-pot-provider | Out-Null
+  }
+  Push-Location (Join-Path $repo "scripts\cobalt"); docker compose up -d 2>$null | Out-Null; Pop-Location
+  & $Python $PythonVersion -m content_watcher config --cobalt-url "http://localhost:9000" | Out-Null
+} else {
+  Write-Host "no       docker                 YouTube's token helper and cobalt need Docker Desktop (winget install Docker.DockerDesktop); the other steps still run"
+}
+# The headless browser for Instagram's embed backup.
+& $Python $PythonVersion -m playwright install chromium | Out-Null
+
 # 7. Register the scheduled task: every minute, hidden, whether or not anyone is signed in to the desktop session.
 $pythonw = & $Python $PythonVersion -c "import sys, pathlib; p = pathlib.Path(sys.executable); print(p.with_name('pythonw.exe') if p.with_name('pythonw.exe').exists() else p)"
 $action = New-ScheduledTaskAction -Execute $pythonw -Argument "-m content_watcher watch --once" -WorkingDirectory $repo

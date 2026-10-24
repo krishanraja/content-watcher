@@ -11,7 +11,7 @@ from typing import Callable
 from .. import urls
 from ..config import Config
 from ..post import Post
-from . import apify, free_sites, gallerydl, instaloader_fetch, linkedin_page, tiktok_page, youtube_extra, ytdlp
+from . import apify, free_sites, gallerydl, instagram_embed, instaloader_fetch, linkedin_page, tiktok_page, youtube_extra, ytdlp
 from .base import STATUS_CLASSES, FetchFailed
 
 @dataclass
@@ -41,6 +41,8 @@ def _methods(link: urls.PostLink, config: Config) -> list[tuple[str, Callable[[P
             chain.append(("cobalt", lambda f: free_sites.cobalt(url, platform, post_id, f, config.cobalt_url)))
 
     if platform == "instagram":
+        # The embed first: one request, logged out, the post's own data (instagram_embed.py, tested live).
+        chain.append(("instagram_embed", lambda f: instagram_embed.fetch(url, post_id, f)))
         if link.kind == "reel":
             chain.append(("ytdlp", lambda f: ytdlp.fetch(url, platform, f)))
         else:
@@ -51,6 +53,7 @@ def _methods(link: urls.PostLink, config: Config) -> list[tuple[str, Callable[[P
         chain.append((f"apify_{actor}", lambda f: apify.fetch(url, platform, f, config, actor_key=actor, expected_id=post_id)))
         if cookies:
             chain.append(("gallerydl_cookies", lambda f: gallerydl.fetch(url, platform, f, cookies_profile=cookies)))
+        chain.append(("instagram_cover_only", lambda f: instagram_embed.cover_only(url, post_id, f)))
     elif platform == "tiktok":
         if link.kind != "photo":
             chain.append(("ytdlp", lambda f: ytdlp.fetch(url, platform, f, captions="all", need_audio=True)))
@@ -78,6 +81,9 @@ def _methods(link: urls.PostLink, config: Config) -> list[tuple[str, Callable[[P
         cobalt_step()
         if cookies:
             chain.append(("ytdlp_cookies", lambda f: ytdlp.fetch(url, platform, f, captions="youtube", cookies_profile=cookies)))
+        if link.kind == "short":
+            # A Short never fails outright: about two cents on Apify under the cap.
+            chain.append(("apify_youtube_short", lambda f: apify.fetch_youtube_short(url, post_id, f, config, meta)))
         chain.append(("yt_transcript_api", lambda f: youtube_extra.transcript_api(url, post_id, f, meta)))
         chain.append(("apify_youtube_transcript", lambda f: youtube_extra.johnvc(url, post_id, f, config, meta)))
     elif platform == "linkedin":

@@ -70,8 +70,16 @@ def checks(config: Config) -> list[dict]:
         bgutil = _dist_version("bgutil-ytdlp-pot-provider")
     except Exception:  # noqa: BLE001
         bgutil = None
-    add("bgutil PO token", bool(bgutil), bgutil or "missing: pip install bgutil-ytdlp-pot-provider (and its local server)",
-        "YouTube from the home connection")
+    import socket as _socket
+    try:
+        with _socket.create_connection(("127.0.0.1", 4416), timeout=2):
+            server = True
+    except OSError:
+        server = False
+    add("bgutil PO token", bool(bgutil) and server,
+        (bgutil or "plugin missing: pip install bgutil-ytdlp-pot-provider==2.0.2")
+        + ("" if server else "; its server is not running on 127.0.0.1:4416 (the installer starts it with Docker)"),
+        "YouTube and Shorts from the home connection")
     instaloader = _module_version("instaloader")
     add("instaloader", bool(instaloader), instaloader or "missing: pip install instaloader==4.15.4", "an Instagram fallback")
     transcripts = _module_version("youtube_transcript_api")

@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 from content_watcher.config import Config
-from content_watcher.fetch import apify, base, fetch, free_sites, gallerydl, instaloader_fetch, linkedin_page, tiktok_page, youtube_extra, ytdlp
+from content_watcher.fetch import apify, base, fetch, free_sites, gallerydl, instagram_embed, instaloader_fetch, linkedin_page, tiktok_page, youtube_extra, ytdlp
 from content_watcher.fetch.base import FetchFailed
 from tests.cw_helpers import FIXTURES, FakeOpener, fake_tool, load, with_path
 
@@ -184,6 +184,58 @@ class FreeSiteTests(unittest.TestCase):
         self.assertEqual((got.post_id, got.author, got.caption, got.counts), ("DAbC", "studio.example", "Three edits", {"likes": 42, "views": 900}))
 
 
+def fake_download(url, target, **kwargs):
+    target.write_bytes(b"x")
+    return target
+
+
+class InstagramEmbedTests(unittest.TestCase):
+    """The embed pages' own data, recorded live on 2026-10-24 (trimmed to the fields read)."""
+
+    def read(self, name):
+        return instagram_embed.parts(instagram_embed.media_data((FIXTURES / name).read_text()))
+
+    def test_a_reel(self):
+        meta, files = self.read("ig_embed_video.html")
+        self.assertEqual((meta["post_id"], meta["author"]), ("Cop84x6u7CP", "enbiggen"))
+        self.assertEqual([ext for _, ext in files], [".mp4"])
+        self.assertIn("Indiana Jones", meta["caption"])
+        self.assertGreater(meta["counts"]["views"], 0)
+
+    def test_a_carousel_keeps_its_slides_in_order(self):
+        meta, files = self.read("ig_embed_sidecar.html")
+        self.assertEqual(meta["author"], "instagram")
+        self.assertEqual([ext for _, ext in files], [".mp4", ".mp4", ".mp4"])  # three slides, no cover pictures
+
+    def test_licensed_music_fails_on_to_the_next_step(self):
+        with self.assertRaises(FetchFailed) as failure:
+            self.read("ig_embed_licensed.html")
+        self.assertEqual(failure.exception.detail, "ig_licensed_audio")
+
+    def test_a_page_without_the_data(self):
+        self.assertIsNone(instagram_embed.media_data("<html>no data</html>"))
+
+    def test_downloads_every_file_with_platform_names(self):
+        page = (FIXTURES / "ig_embed_sidecar.html").read_text()
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(instagram_embed, "_plain", return_value=page), \
+                mock.patch.object(instagram_embed, "download", side_effect=fake_download):
+            post = instagram_embed.fetch("https://www.instagram.com/p/BQ0eAlwhDrw/", "BQ0eAlwhDrw", Path(tmp))
+        self.assertEqual([p.name for p in post.media],
+                         ["instagram_BQ0eAlwhDrw_01.mp4", "instagram_BQ0eAlwhDrw_02.mp4", "instagram_BQ0eAlwhDrw_03.mp4"])
+        self.assertEqual((post.shape, post.method), ("carousel", "instagram_embed"))
+
+    def test_cover_only_still_makes_a_card(self):
+        page = (FIXTURES / "ig_embed_licensed.html").read_text()
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(instagram_embed, "_plain", return_value=page), \
+                mock.patch.object(instagram_embed, "download", side_effect=fake_download):
+            post = instagram_embed.cover_only("https://www.instagram.com/reel/CDUMkliABpa/", "CDUMkliABpa", Path(tmp))
+        self.assertEqual(post.media[0].name, "instagram_CDUMkliABpa_cover.jpg")
+        self.assertEqual(post.author, "clippedinandfree")
+        self.assertIn("could not be downloaded", post.caption)
+
+
 class ToolRunTests(unittest.TestCase):
     """The yt-dlp and gallery-dl wrappers against fake programs that write what the real ones write."""
 
@@ -358,6 +410,18 @@ class ApifyTests(unittest.TestCase):
             apify.fetch("https://www.instagram.com/reel/x/", "instagram", self.root, config, actor_key="instagram_reel", opener=opener)
         self.assertAlmostEqual(apify.month_spend(), 0.01)
 
+    def test_a_youtube_short_backstop_downloads_the_file(self):
+        opener = FakeOpener({
+            "https://api.apify.com/v2/acts/marielise.dev~youtube-video-downloader/": b'[{"title": "A Short", "result": {"downloadUrl": "https://files.example/s.mp4"}}]',
+            "https://files.example/s.mp4": b"short",
+        })
+        config = Config(apify_enabled=True, apify_monthly_cap_usd=5.0)
+        post = apify.fetch_youtube_short("https://www.youtube.com/shorts/abcdefghijk", "abcdefghijk", self.root, config,
+                                         {"title": "A Short", "author_name": "Chan"}, opener=opener)
+        self.assertEqual(post.media[0].read_bytes(), b"short")
+        self.assertEqual(json.loads(opener.calls[0][1])["quality"], "720p")
+        self.assertAlmostEqual(apify.month_spend(), 0.06)
+
     def test_out_of_credit_is_blocked(self):
         opener = FakeOpener({"https://api.apify.com/": 402})
         config = Config(apify_enabled=True, apify_monthly_cap_usd=5.0)
@@ -397,26 +461,33 @@ class ChainTests(unittest.TestCase):
         self.assertTrue((self.root / "got" / "tiktok_7430000000000000003" / "post.json").is_file())
 
     def test_every_method_failing_reports_the_last_steps_class(self):
-        with mock.patch.object(ytdlp, "fetch", side_effect=FetchFailed("blocked", "empty_media_response")), \
+        with mock.patch.object(instagram_embed, "fetch", side_effect=FetchFailed("other", "ig_licensed_audio")), \
+                mock.patch.object(ytdlp, "fetch", side_effect=FetchFailed("blocked", "empty_media_response")), \
                 mock.patch.object(instaloader_fetch, "fetch", side_effect=FetchFailed("blocked", "rate_limited")), \
-                mock.patch.object(apify, "fetch", side_effect=FetchFailed("not_found", "apify_not_found")):
+                mock.patch.object(apify, "fetch", side_effect=FetchFailed("blocked", "apify_blocked")), \
+                mock.patch.object(instagram_embed, "cover_only", side_effect=FetchFailed("not_found", "ig_removed")):
             result = fetch("https://www.instagram.com/reel/DAbCdEfGhIj/", self.root / "got", Config(), resolve=False)
         self.assertIsNone(result.post)
         self.assertEqual(result.status_class, "not_found")
         self.assertEqual([a.outcome for a in result.attempts],
-                         ["blocked:empty_media_response", "blocked:rate_limited", "not_found:apify_not_found"])
+                         ["other:ig_licensed_audio", "blocked:empty_media_response", "blocked:rate_limited",
+                          "blocked:apify_blocked", "not_found:ig_removed"])
 
     def test_chains_follow_the_spec_order(self):
         from content_watcher import urls
         from content_watcher.fetch import _methods
         names = lambda link: [name for name, _ in _methods(urls.parse(link), Config())]
-        self.assertEqual(names("https://www.instagram.com/reel/DAbC/"), ["ytdlp", "instaloader", "apify_instagram_reel"])
-        self.assertEqual(names("https://www.instagram.com/p/CxYz/"), ["ytdlp_carousel", "instaloader", "apify_instagram_post"])
+        self.assertEqual(names("https://www.instagram.com/reel/DAbC/"),
+                         ["instagram_embed", "ytdlp", "instaloader", "apify_instagram_reel", "instagram_cover_only"])
+        self.assertEqual(names("https://www.instagram.com/p/CxYz/"),
+                         ["instagram_embed", "ytdlp_carousel", "instaloader", "apify_instagram_post", "instagram_cover_only"])
         self.assertEqual(names("https://www.tiktok.com/@a/video/1"),
                          ["ytdlp", "gallerydl", "tiktok_page", "tikwm", "tikmate", "apify_tiktok"])
         self.assertEqual(names("https://www.tiktok.com/@a/photo/1"), ["gallerydl", "tiktok_page", "tikwm", "apify_tiktok"])
         self.assertEqual(names("https://youtu.be/dQw4w9WgXcQ"),
                          ["yt_oembed", "ytdlp", "ytdlp_mweb", "yt_transcript_api", "apify_youtube_transcript"])
+        self.assertEqual(names("https://www.youtube.com/shorts/abcdefghijk"),
+                         ["yt_oembed", "ytdlp", "ytdlp_mweb", "apify_youtube_short", "yt_transcript_api", "apify_youtube_transcript"])
         self.assertEqual(names("https://www.linkedin.com/feed/update/urn:li:activity:7250000000000000000/"),
                          ["linkedin_guest_page", "apify_linkedin_harvest", "apify_linkedin_supreme", "jina_reader"])
         with_cobalt = [name for name, _ in _methods(urls.parse("https://www.tiktok.com/@a/video/1"), Config(cobalt_url="http://localhost:9000"))]
