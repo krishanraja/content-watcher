@@ -14,12 +14,15 @@ from tests.cw_helpers import FIXTURES, FakeOpener, fake_tool, load, with_path
 class ClassifyTests(unittest.TestCase):
     def test_tool_errors_map_to_the_card_classes(self):
         cases = {
-            "ERROR: [Instagram] DAbC: Instagram sent an empty media response": "login_wall",
+            "ERROR: [Instagram] DAbC: Instagram sent an empty media response. Use --cookies": "blocked",
+            "ERROR: [Instagram] x: You have exceeded the rate-limit for accessing posts anonymously. Use --cookies": "blocked",
             "ERROR: [Instagram] x: Restricted Video: You must be 18 years old": "login_wall",
-            "ERROR: [TikTok] 1: Video not available, status code 10204": "not_found",
+            "ERROR: [TikTok] 1: Video not available, status code 10204": "blocked",
+            "ERROR: [TikTok] 1: Video not available, status code 10216": "not_found",
             "ERROR: unable to download video data: HTTP Error 403: Forbidden": "blocked",
             "ERROR: HTTP Error 429: Too Many Requests": "blocked",
-            "ERROR: [youtube] x: Sign in to confirm you're not a bot": "login_wall",
+            "ERROR: [youtube] x: Sign in to confirm you're not a bot": "blocked",
+            "ERROR: [youtube] x: Private video. Sign in if you've been granted access": "login_wall",
             "ERROR: File is larger than max-filesize (2.1GiB > 1.5GiB)": "too_big",
             "ERROR: The read operation timed out": "timeout",
             "ERROR: something nobody has seen": "other",
@@ -58,6 +61,9 @@ class ParserTests(unittest.TestCase):
         with self.assertRaises(FetchFailed) as removed:
             tiktok_page.item_struct((FIXTURES / "tiktok_removed_page.html").read_text())
         self.assertEqual(removed.exception.status_class, "not_found")
+        with self.assertRaises(FetchFailed) as ip:
+            tiktok_page.item_struct((FIXTURES / "tiktok_ipblocked_page.html").read_text())
+        self.assertEqual((ip.exception.status_class, ip.exception.detail), ("blocked", "ip_blocked"))
         with self.assertRaises(FetchFailed) as challenge:
             tiktok_page.item_struct((FIXTURES / "tiktok_challenge_page.html").read_text())
         self.assertEqual(challenge.exception.status_class, "blocked")
@@ -68,7 +74,13 @@ class ParserTests(unittest.TestCase):
         self.assertEqual([ext for _, ext in media], [".jpg", ".mp4", ".jpg"])
         self.assertIn("s2.mp4", media[1][0])
         meta, media = apify.instagram_parts(load("apify_instagram_reel.json")[0])
-        self.assertIn("key-value-stores", media[0][0])
+        self.assertEqual(media[0][0], "https://scontent.cdninstagram.example/r.mp4")  # the CDN file, no paid stored copy
+        with self.assertRaises(FetchFailed) as wrong:
+            apify.instagram_parts(load("apify_instagram_reel.json")[0], expected_id="SomethingElse")
+        self.assertEqual(wrong.exception.detail, "apify_wrong_item")
+        with self.assertRaises(FetchFailed) as blocked:
+            apify.instagram_parts({"requestErrorMessages": ["Error: BLOCKED"]})
+        self.assertEqual(blocked.exception.status_class, "blocked")
         self.assertNotIn("comments", meta["counts"])  # -1 means hidden, not a count
         with self.assertRaises(FetchFailed) as missing:
             apify.instagram_parts(load("apify_instagram_missing.json")[0])
@@ -86,8 +98,21 @@ class ParserTests(unittest.TestCase):
     def test_linkedin_public_page(self):
         found = linkedin_page.parse_page((FIXTURES / "linkedin_post.html").read_text())
         self.assertEqual(found["author"], "Pat Example")
-        self.assertIn("One idea a slide", found["text"])
-        self.assertEqual(found["images"], ["https://media.licdn.example/one.jpg"])
+        self.assertEqual(found["text"], "Most decks fail on slide one.")  # the commentary element comes first
+        self.assertEqual(len(found["images"]), 1)  # one picture, at its largest size
+        self.assertIn("feedshare-shrink_1280", found["images"][0])
+        self.assertEqual(found["shape"], "image")
+        video = linkedin_page.parse_page((FIXTURES / "linkedin_video_post.html").read_text())
+        self.assertEqual(video["author"], "Maker Co")  # a VideoObject's author is its creator
+        self.assertEqual(video["posted_at"], "2026-10-18T09:00:00.000Z")  # and its date is uploadDate
+        self.assertTrue(video["video"].endswith("mp4-720p?e=2147483647"))  # the largest rendition
+        self.assertEqual(video["text"], "The cloud, explained.\nNo jargon.")
+        self.assertEqual(video["caption_url"], "https://dms.licdn.example/captions/X.vtt")
+        self.assertEqual(video["counts"], {"likes": 120, "comments": 7})
+        self.assertEqual(video["shape"], "video")
+        with self.assertRaises(FetchFailed) as nobody:
+            linkedin_page.parse_page('<html><head><meta property="og:description" content="Sign up"></head></html>')
+        self.assertIn(nobody.exception.status_class, ("login_wall", "other"))  # never filed as the post
         with self.assertRaises(FetchFailed) as wall:
             linkedin_page.parse_page((FIXTURES / "linkedin_authwall.html").read_text())
         self.assertEqual(wall.exception.status_class, "login_wall")
@@ -104,6 +129,10 @@ class ToolRunTests(unittest.TestCase):
         self.bin = self.root / "bin"
         self.folder = self.root / "out"
         self.folder.mkdir()
+        # Use the stand-in programs on PATH instead of the installed modules.
+        self.modules = mock.patch.dict(base.MODULES, clear=True)
+        self.modules.start()
+        self.addCleanup(self.modules.stop)
 
     def tearDown(self):
         self.temp.cleanup()
@@ -130,7 +159,47 @@ assert '--write-subs' in args
         fake_tool(self.bin, "yt-dlp", "print('ERROR: [Instagram] x: Instagram sent an empty media response', file=sys.stderr); sys.exit(1)")
         with mock.patch.dict(os.environ, with_path(self.bin)), self.assertRaises(FetchFailed) as failure:
             ytdlp.fetch("https://www.instagram.com/reel/x/", "instagram", self.folder)
-        self.assertEqual((failure.exception.status_class, failure.exception.detail), ("login_wall", "empty_media_response"))
+        self.assertEqual((failure.exception.status_class, failure.exception.detail), ("blocked", "empty_media_response"))
+
+    def test_ytdlp_carousel_keeps_every_slide_in_order(self):
+        fake_tool(self.bin, "yt-dlp", """
+out = args[args.index('-o') + 1]
+assert '--ignore-no-formats-error' in args and '--write-thumbnail' in args and '--no-playlist' not in args
+folder = pathlib.Path(out).parent
+(folder / 'CxYz_01.jpg').write_bytes(b'one')
+(folder / 'CxYz_02.mp4').write_bytes(b'two')
+(folder / 'CxYz_02.jpg').write_bytes(b'thumb of two')
+(folder / 'CxYz_03.webp').write_bytes(b'three')
+(folder / 'CxYz.info.json').write_text(json.dumps({'_type': 'playlist', 'id': 'CxYz', 'playlist_count': 3, 'channel': 'carousel.example', 'description': 'Five ways'}))
+""")
+        with mock.patch.dict(os.environ, with_path(self.bin)):
+            post = ytdlp.fetch_carousel("https://www.instagram.com/p/CxYz/", "instagram", self.folder)
+        self.assertEqual([p.name for p in post.media], ["CxYz_01.jpg", "CxYz_02.mp4", "CxYz_03.webp"])
+        self.assertEqual(post.shape, "carousel")
+        self.assertEqual(post.author, "carousel.example")
+
+    def test_ytdlp_carousel_missing_a_slide_fails_on(self):
+        fake_tool(self.bin, "yt-dlp", """
+folder = pathlib.Path(args[args.index('-o') + 1]).parent
+(folder / 'CxYz_01.jpg').write_bytes(b'one')
+(folder / 'CxYz.info.json').write_text(json.dumps({'_type': 'playlist', 'id': 'CxYz', 'playlist_count': 3}))
+""")
+        with mock.patch.dict(os.environ, with_path(self.bin)), self.assertRaises(FetchFailed) as failure:
+            ytdlp.fetch_carousel("https://www.instagram.com/p/CxYz/", "instagram", self.folder)
+        self.assertEqual(failure.exception.detail, "ig_missing_slides")
+
+    def test_youtube_asks_for_the_spoken_language_never_a_translation(self):
+        fake_tool(self.bin, "yt-dlp", """
+assert args[args.index('--sub-langs') + 1] == '.*-orig', args
+base = args[args.index('-o') + 1].replace('%(id)s', 'dQw4w9WgXcQ').rsplit('.', 1)[0]
+pathlib.Path(base + '.mp4').write_bytes(b'v')
+pathlib.Path(base + '.en.vtt').write_text('WEBVTT')
+pathlib.Path(base + '.de-orig.vtt').write_text('WEBVTT')
+pathlib.Path(base + '.info.json').write_text(json.dumps({'id': 'dQw4w9WgXcQ', 'channel': 'C'}))
+""")
+        with mock.patch.dict(os.environ, with_path(self.bin)):
+            post = ytdlp.fetch("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "youtube", self.folder, captions="youtube")
+        self.assertTrue(post.captions_file.name.endswith(".de-orig.vtt"))
 
     def test_gallerydl_slides_in_order_with_sound(self):
         fake_tool(self.bin, "gallery-dl", """
@@ -198,6 +267,33 @@ class ApifyTests(unittest.TestCase):
                                 "resultsLimit": 1, "addParentData": False})
         self.assertAlmostEqual(apify.month_spend(), 0.01)
 
+    def test_tiktok_runs_are_started_then_polled(self):
+        polls = iter([b'{"data": {"id": "run1", "status": "RUNNING"}}',
+                      b'{"data": {"id": "run1", "status": "SUCCEEDED", "defaultDatasetId": "ds1"}}'])
+        opener = FakeOpener({
+            "https://api.apify.com/v2/acts/clockworks~tiktok-video-scraper/runs": b'{"data": {"id": "run1", "status": "READY"}}',
+            "https://api.apify.com/v2/actor-runs/run1": lambda request: next(polls),
+            "https://api.apify.com/v2/datasets/ds1/items": (FIXTURES / "apify_tiktok_video.json").read_bytes(),
+            "https://api.apify.example/v2/key-value-stores/k/records/video.mp4": b"video",
+            "https://api.apify.example/sub.vtt": b"WEBVTT",
+        })
+        config = Config(apify_enabled=True, apify_monthly_cap_usd=5.0)
+        with mock.patch.object(apify.time, "sleep"):
+            post = apify.fetch("https://www.tiktok.com/@tt.video/video/7430000000000000005", "tiktok", self.root,
+                               config, actor_key="tiktok", opener=opener)
+        self.assertEqual(post.media[0].read_bytes(), b"video")
+        started = json.loads(opener.calls[0][1])
+        self.assertNotIn("videoKvStoreIdOrName", started)  # nothing left on his Apify account to delete
+        self.assertNotIn("run-sync", opener.calls[0][0])
+        self.assertAlmostEqual(apify.month_spend(), 0.01)
+
+    def test_a_run_that_times_out_still_counts_against_the_cap(self):
+        opener = FakeOpener({"https://api.apify.com/": 408})
+        config = Config(apify_enabled=True, apify_monthly_cap_usd=5.0)
+        with self.assertRaises(FetchFailed):
+            apify.fetch("https://www.instagram.com/reel/x/", "instagram", self.root, config, actor_key="instagram_reel", opener=opener)
+        self.assertAlmostEqual(apify.month_spend(), 0.01)
+
     def test_out_of_credit_is_blocked(self):
         opener = FakeOpener({"https://api.apify.com/": 402})
         config = Config(apify_enabled=True, apify_monthly_cap_usd=5.0)
@@ -236,14 +332,31 @@ class ChainTests(unittest.TestCase):
                          ["tiktok_7430000000000000003_01.jpg", "tiktok_7430000000000000003_02.jpg"])
         self.assertTrue((self.root / "got" / "tiktok_7430000000000000003" / "post.json").is_file())
 
-    def test_every_method_failing_reports_the_most_telling_class(self):
-        with mock.patch.object(ytdlp, "fetch", side_effect=FetchFailed("login_wall", "empty_media_response")), \
-                mock.patch.object(apify, "fetch", side_effect=FetchFailed("blocked", "spend_not_approved")):
+    def test_every_method_failing_reports_the_last_steps_class(self):
+        with mock.patch.object(ytdlp, "fetch", side_effect=FetchFailed("blocked", "empty_media_response")), \
+                mock.patch.object(apify, "fetch", side_effect=FetchFailed("not_found", "apify_not_found")):
             result = fetch("https://www.instagram.com/reel/DAbCdEfGhIj/", self.root / "got", Config(), resolve=False)
         self.assertIsNone(result.post)
-        self.assertEqual(result.status_class, "login_wall")
+        self.assertEqual(result.status_class, "not_found")
         self.assertEqual([a.outcome for a in result.attempts],
-                         ["login_wall:empty_media_response", "blocked:spend_not_approved"])
+                         ["blocked:empty_media_response", "not_found:apify_not_found"])
+
+    def test_chains_follow_the_spec_order(self):
+        from content_watcher import urls
+        from content_watcher.fetch import _methods
+        names = lambda link: [name for name, _ in _methods(urls.parse(link), Config())]
+        self.assertEqual(names("https://www.instagram.com/reel/DAbC/"), ["ytdlp", "apify_instagram_reel"])
+        self.assertEqual(names("https://www.instagram.com/p/CxYz/"), ["ytdlp_carousel", "apify_instagram_post"])
+        self.assertEqual(names("https://www.tiktok.com/@a/video/1"), ["ytdlp", "gallerydl", "tiktok_page", "apify_tiktok"])
+        self.assertEqual(names("https://www.tiktok.com/@a/photo/1"), ["gallerydl", "tiktok_page", "apify_tiktok"])
+        self.assertEqual(names("https://youtu.be/dQw4w9WgXcQ"), ["ytdlp", "ytdlp_mweb"])
+        self.assertEqual(names("https://www.linkedin.com/feed/update/urn:li:activity:7250000000000000000/"), ["linkedin_guest_page"])
+
+    def test_a_link_that_is_not_a_post_stops_at_once(self):
+        with mock.patch.object(ytdlp, "fetch") as never:
+            result = fetch("https://www.instagram.com/studio.example/", self.root / "got", Config(), resolve=False)
+        self.assertFalse(never.called)
+        self.assertEqual((result.status_class, result.detail), ("not_found", "unsupported_url"))
 
 
 if __name__ == "__main__":

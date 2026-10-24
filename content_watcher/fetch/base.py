@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
+import sys
 import shutil
 import socket
 import urllib.error
@@ -32,16 +34,19 @@ class FetchFailed(RuntimeError):
 # Ordered: the first pattern that matches decides.
 _PATTERNS: list[tuple[str, str, str]] = [
     (r"File is larger than max-filesize|too large|max-filesize", "too_big", "over_size_cap"),
-    (r"Private video|This account is private|login required|log in|logged-in|Sign in to confirm|"
-     r"requires authentication|cookies|use --cookies|Restricted Video|age-restricted|"
-     r"login page|LoginRequired|authwall", "login_wall", "login_required"),
-    (r"empty media response", "login_wall", "empty_media_response"),
-    (r"HTTP Error 404|404 Not Found|Video unavailable|Video not available|status code 102(?:04|16)|This video is unavailable|does not exist|"
-     r"Post isn't available|post may have been removed|has been removed|no longer available|"
-     r"Unsupported URL|NotFoundError|not found", "not_found", "not_found"),
-    (r"HTTP Error 429|Too Many Requests|rate.?limit", "blocked", "rate_limited"),
-    (r"HTTP Error 403|Forbidden|captcha|challenge|blocked|Unexpected response|PO Token|bot",
-     "blocked", "refused"),
+    # These carry yt-dlp's "use --cookies" hint but are refusals, not login walls (FETCH_METHODS.md, Instagram step 2).
+    (r"exceeded the rate-limit|HTTP Error 429|Too Many Requests|rate.?limit", "blocked", "rate_limited"),
+    (r"empty media response", "blocked", "empty_media_response"),
+    (r"Sign in to confirm you.re not a bot|not a bot", "blocked", "bot_check"),
+    (r"status code 10204|IP address is blocked", "blocked", "ip_blocked"),
+    (r"Private video|This account is private|login required|requires authentication|Restricted Video|"
+     r"age-restricted|LoginRequired|authwall|Sign in to confirm your age", "login_wall", "login_required"),
+    (r"Unsupported URL", "other", "unsupported_url"),
+    (r"HTTP Error 404|404 Not Found|Video unavailable|This video is unavailable|Video not available|does not exist|"
+     r"status code 10216|Post isn't available|post may have been removed|has been removed|no longer available|"
+     r"NotFoundError|not found", "not_found", "not_found"),
+    (r"HTTP Error 403|Forbidden|captcha|challenge|blocked|Unexpected response|PO Token|"
+     r"Unable to extract universal data", "blocked", "refused"),
     (r"timed out|timeout|Read timed out", "timeout", "network_timeout"),
 ]
 
@@ -53,12 +58,22 @@ def classify(text: str) -> tuple[str, str]:
     return "other", "unrecognised_error"
 
 
+MODULES = {"yt-dlp": "yt_dlp", "gallery-dl": "gallery_dl"}
+
+
+def tool_command(name: str) -> list[str]:
+    """Run yt-dlp and gallery-dl through this interpreter, so a stale copy on PATH is never the one that runs."""
+    module = MODULES.get(name)
+    if module and importlib.util.find_spec(module) is not None:
+        return [sys.executable, "-m", module]
+    found = tools.which(name)  # a stand-alone install, or a test's stand-in
+    if not found:
+        raise FetchFailed("other", f"no_{name.replace('-', '_')}")
+    return [found]
+
+
 def run_tool(name: str, args: list[str | Path], *, timeout: float) -> tools.Ran:
-    try:
-        binary = tools.need(name)
-    except tools.ToolMissing:
-        raise FetchFailed("other", f"no_{name.replace('-', '_')}") from None
-    ran = tools.run([binary, *args], timeout=timeout)
+    ran = tools.run([*tool_command(name), *args], timeout=timeout)
     if ran.timed_out:
         raise FetchFailed("timeout", f"{name.replace('-', '_')}_timeout")
     if ran.returncode != 0:
@@ -125,3 +140,13 @@ def clean_folder(folder: Path) -> None:
     if folder.exists():
         shutil.rmtree(folder)
     folder.mkdir(parents=True)
+
+
+def has_audio(path: Path) -> bool | None:
+    """Whether a downloaded video has a sound track; None when ffprobe is missing."""
+    ffprobe = tools.which("ffprobe")
+    if not ffprobe:
+        return None
+    ran = tools.run([ffprobe, "-v", "error", "-select_streams", "a", "-show_entries", "stream=index",
+                     "-of", "csv=p=0", path], timeout=30)
+    return bool(ran.stdout.strip()) if ran.returncode == 0 else None

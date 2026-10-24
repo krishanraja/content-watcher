@@ -27,7 +27,9 @@ def item_struct(page: str) -> dict:
     data = json.loads(match.group(1))
     detail = (data.get("__DEFAULT_SCOPE__") or {}).get("webapp.video-detail") or {}
     status = detail.get("statusCode")
-    if status in (10204, 10216):
+    if status == 10204:  # "Your IP address is blocked" (FETCH_METHODS.md, TikTok step 3a), not a removed post
+        raise FetchFailed("blocked", "ip_blocked")
+    if status == 10216:
         raise FetchFailed("not_found", "post_removed")
     if status in (10222,):
         raise FetchFailed("login_wall", "private_post")
@@ -35,6 +37,19 @@ def item_struct(page: str) -> dict:
     if not item:
         raise FetchFailed("not_found" if status else "other", "no_item")
     return item
+
+
+def caption_url(item: dict) -> str | None:
+    """TikTok's own captions, English first, when the post has them."""
+    video = item.get("video") or {}
+    found = []
+    for info in video.get("subtitleInfos") or []:
+        found.append((str(info.get("LanguageCodeName") or info.get("LanguageID") or ""), info.get("Url")))
+    for info in (video.get("claInfo") or {}).get("captionInfos") or []:
+        found.append((str(info.get("language") or ""), info.get("url") or (info.get("urlList") or [None])[0]))
+    found = [(lang, url) for lang, url in found if url]
+    english = [url for lang, url in found if lang.lower().startswith(("en", "eng"))]
+    return (english or [url for _, url in found] or [None])[0]
 
 
 def parts(item: dict) -> tuple[dict, list[tuple[str, str]], str | None]:
@@ -69,6 +84,7 @@ def parts(item: dict) -> tuple[dict, list[tuple[str, str]], str | None]:
 
 
 def fetch(url: str, folder: Path, *, timeout: float = 30) -> Post:
+    url = url.replace("/photo/", "/video/")  # a photo post fetched as /video/ works (FETCH_METHODS.md, step 3a)
     jar = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
     request = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA, "Accept-Language": "en-US,en;q=0.9"})
@@ -81,7 +97,9 @@ def fetch(url: str, folder: Path, *, timeout: float = 30) -> Post:
         raise FetchFailed("timeout", "page_timeout") from None
     except urllib.error.URLError:
         raise FetchFailed("other", "page_network_error") from None
-    meta, media, music = parts(item_struct(page))
+    item = item_struct(page)
+    meta, media, music = parts(item)
+    captions = caption_url(item)
     if not media:
         raise FetchFailed("other", "no_media_in_page")
     post_id = str(meta["post_id"] or "post")
@@ -96,4 +114,9 @@ def fetch(url: str, folder: Path, *, timeout: float = 30) -> Post:
             post.audio = download(music, folder / f"tiktok_{post_id}_sound.mp3", headers=headers, opener=opener)
         except FetchFailed:
             post.audio = None
+    if captions:
+        try:
+            post.captions_file = download(captions, folder / f"tiktok_{post_id}.en.vtt", headers=headers, opener=opener)
+        except FetchFailed:
+            post.captions_file = None
     return post

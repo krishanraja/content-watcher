@@ -10,6 +10,7 @@ from pathlib import Path
 from . import ENGINE_REV, secrets, tools
 from .config import Config, state_dir
 from .fetch import apify
+from .urls import BROWSER_UA
 
 
 def _module_version(name: str) -> str | None:
@@ -58,10 +59,11 @@ def checks(config: Config) -> list[dict]:
     add("yt-dlp", at_least(ytdlp, "2026.10.21"), ytdlp or "missing: install yt-dlp 2026.10.21 by hand (its changelog warns against the -U self-updater)",
         "Instagram reels, TikTok and YouTube videos")
     gallery = tools.tool_version("gallery-dl")
-    add("gallery-dl", at_least(gallery, "1.32.17"), gallery or "missing: pip install -U gallery-dl",
+    add("gallery-dl", at_least(gallery, "1.32.17"),
+        (gallery + " (TikTok's 403 fix is only on gallery-dl master, not in 1.32.17)") if gallery else "missing: pip install -U gallery-dl",
         "TikTok photo posts and carousels")
     curl_cffi = _module_version("curl_cffi")
-    add("curl_cffi", bool(curl_cffi), curl_cffi or "missing: pip install curl_cffi==0.16.0",
+    add("curl_cffi", curl_cffi == "0.16.0", (curl_cffi + (" (pin 0.16.0: newer is blocked on TikTok)" if curl_cffi != "0.16.0" else "")) if curl_cffi else "missing: pip install curl_cffi==0.16.0",
         "yt-dlp browser impersonation (Instagram, TikTok)")
     try:
         from importlib.metadata import version as _dist_version
@@ -91,6 +93,7 @@ def checks(config: Config) -> list[dict]:
         add(f"folder {folder}", exists, value or "not set: content-watch config --" + folder.replace("_", "-") + " <path>",
             "filing and reading hand-dropped files", config.filing == "drive")
     add("state", True, str(state_dir()), "local log, readings and state")
+    add("browser user agent", True, BROWSER_UA, "TikTok and LinkedIn page reads")
     add("engine_rev", True, ENGINE_REV, "the reading format")
     return rows
 
