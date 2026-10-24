@@ -137,18 +137,20 @@ Inspiration work (its owner is named in content-engine `NOW.md`).
 
 ## 6. Every way to get each kind of post
 
-State of this section: Instagram and TikTok come from research verified against current sources on 2026-10-24
-(issue trackers, release notes, Apify actor pages and the Apify API's own prices for his account's tier). YouTube and
-LinkedIn are provisional and are being verified now; the Inspiration session replaces them here when that lands. Pull
-`main` before step 3 of section 10 and read this section again.
+State of this section: the full, verified methods for all five kinds of post are in
+[`docs/FETCH_METHODS.md`](FETCH_METHODS.md) (2026-10-24: five researchers, each checked by a skeptic, then checked twice
+more against the raw research). Where this section and that file differ, that file wins. What follows is the short
+version; YouTube and LinkedIn are now verified there too.
 
 Rules for every platform:
 
 - Normalise the link first: follow share and short links (instagram.com/share/..., vm.tiktok.com, vt.tiktok.com,
   tiktok.com/t, youtu.be, lnkd.in) to the canonical post URL and drop tracking parameters (igsh, si, utm_*). That
   canonical form is `url_key`.
-- Keep the tool versions fresh: these platforms break the open tools every few weeks and the fixes ship fast. Update
-  yt-dlp and gallery-dl before each batch (`yt-dlp -U`), and let `doctor` report the versions.
+- Keep the tool versions fresh: these platforms break the open tools every few weeks and the fixes ship fast. Install
+  yt-dlp 2026.10.21 by hand, never through its self-updater (its release notes warn old executables are open to a
+  man-in-the-middle attack), update through pip from there, and let `doctor` report the versions
+  (`docs/FETCH_METHODS.md`, "Across all five").
 - On Windows, browser cookies come from Firefox (`--cookies-from-browser firefox:<profile>`). Chrome's cookies cannot
   be read since Chrome 127's app-bound encryption (yt-dlp issue #10927, still open).
 - Never put a session cookie for any platform in GitHub Actions. If Actions ever runs a fetch, it starts at the Apify
@@ -222,29 +224,13 @@ the photo post's images). Treat it as a fallback; TikTok can serve a challenge a
 Do not use: Firecrawl (refuses tiktok.com), oEmbed (embed only, no caption now, and being deprecated), the Display API
 (his own videos only), the Research API (not eligible), TikTokApi or cobalt (older and broken for some in 2026).
 
-### YouTube: videos and Shorts (provisional, being verified)
+### YouTube: videos and Shorts, and LinkedIn posts
 
-1. **yt-dlp on the home computer.** From a home connection it works with a JavaScript runtime installed (deno) for
-   YouTube's player challenge; from data-centre addresses YouTube now asks for a PO token and blocks often (yt-dlp
-   issues #16072 and others, 2026). `yt-dlp --write-info-json --write-subs --write-auto-subs --sub-langs "en.*"
-   --write-thumbnail <url>`.
-2. **Captions first, for the words.** `--skip-download --write-auto-subs` gets YouTube's own captions with timings
-   without fetching the video: free, and usually better than a transcription. Download the video only for the visual
-   read (shots, zooms, screen text, faces).
-3. Metadata only, sanctioned: the YouTube Data API v3 (title, description, channel, date, counts; a quota, no media).
-4. Apify YouTube actors as the fallback when the home computer cannot fetch.
-
-### LinkedIn posts (provisional, being verified)
-
-LinkedIn is the hardest: other members' posts are behind a login and the official APIs do not serve them.
-
-1. **The text, without a login, where the post is public:** a page reader on the public post URL may return the post's
-   text and author. Check per post; many return a login wall.
-2. **Apify LinkedIn post actors:** the post's text, author, date, counts, images, a document post's pages and a
-   video's file. Check whether a given actor needs his LinkedIn cookies; prefer one that does not.
-3. **His own signed-in session in a headless browser on the home computer** (Playwright): the most complete, and the
-   most account risk. His decision (D2).
-4. A video in a LinkedIn post: yt-dlp may have a working extractor for post videos; check before relying on it.
+Verified on 2026-10-24; the chains, commands, prices and open questions are in `docs/FETCH_METHODS.md` ("YouTube:
+videos and Shorts" and "LinkedIn posts"). In short: YouTube is done on the home computer (yt-dlp with Deno and the
+bgutil PO token provider, captions first, oEmbed for the metadata), because YouTube blocks data-centre addresses.
+LinkedIn's public posts load in full for a guest (22 of 22 guest reads returned the post on 2026-10-24), with Apify as
+the fallback and his own session only for posts behind a login.
 
 A LinkedIn post is filed as a Markdown file of its text (with the author, the date and the link) in `Cold Ideas &
 Inspo`, plus its media beside it: a document post's pages as a carousel, a video as a video.
