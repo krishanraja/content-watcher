@@ -28,9 +28,9 @@ class Config:
     cold_ideas: str | None = None  # synced path of Cold Ideas & Inspo
     # How Instagram and LinkedIn are fetched (D2): Firefox profile names allowed for cookies, per platform.
     cookies: dict[str, str] = field(default_factory=dict)
-    # Paid fallback (D2). Off until Krish sets a standing monthly cap.
-    apify_enabled: bool = False
-    apify_monthly_cap_usd: float = 0.0
+    # Paid fallback (D2, Krish 2026-10-24: "Apify with $5 cap"): only after the free methods fail, never above the cap.
+    apify_enabled: bool = True
+    apify_monthly_cap_usd: float = 5.0
     engine_url: str = "https://content-engine-flame-nu.vercel.app"
     machine: str = field(default_factory=lambda: os.environ.get("COMPUTERNAME") or socket.gethostname() or "home")
     whisper_model: str = "small"

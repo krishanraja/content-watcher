@@ -162,9 +162,14 @@ class ApifyTests(unittest.TestCase):
     def test_no_paid_run_without_a_standing_cap(self):
         opener = FakeOpener({})
         with self.assertRaises(FetchFailed) as failure:
-            apify.fetch("https://www.instagram.com/p/CxYzSide01/", "instagram", self.root, Config(), actor_key="instagram_post", opener=opener)
+            apify.fetch("https://www.instagram.com/p/CxYzSide01/", "instagram", self.root, Config(apify_enabled=False),
+                        actor_key="instagram_post", opener=opener)
         self.assertEqual(failure.exception.detail, "spend_not_approved")
         self.assertEqual(opener.calls, [])
+
+    def test_the_standing_cap_is_five_dollars(self):
+        self.assertTrue(Config().apify_enabled)
+        self.assertEqual(Config().apify_monthly_cap_usd, 5.0)
 
     def test_cap_reached_stops_before_the_call(self):
         apify.record_spend(4.995)

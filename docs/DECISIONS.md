@@ -37,7 +37,9 @@ From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the wo
   overwrites, and the same post twice is a no-op. The first real write into his Drive still waits for his yes on the
   live end-to-end run.
 - **D2. How Instagram and LinkedIn are fetched** (his signed-in Firefox session, or Apify with a standing monthly cap).
-  To ask after D1. Until then Apify is off (`apify_enabled: false`) and no cookies are used.
+  Asked 2026-10-24 with the best guess of Apify with a $5 cap. **Ruling (Krish, 2026-10-24): "Apify with $5 cap".**
+  Apify runs only after the free methods fail, never with his accounts, and the local spend ledger stops it before a
+  run that would pass $5 in a calendar month. No cookies are used.
 - **D3. The North Star for the renamed repository.** To ask after D2.
 
 ## 2026-10-24: A separate route for hand-dropped readings
@@ -53,9 +55,10 @@ Decision: a request's `status_class` is one of `login_wall`, `not_found`, `too_b
 the classes Control Center puts into words. The finer reason (for example `spend_not_approved`,
 `empty_media_response`) stays in the local log as a count, never on the request. Told the Inspiration session.
 
-## 2026-10-24: The Inspiration session builds the engine routes
+## 2026-10-24: Who builds the engine routes
 
-**Ruling (Krish, 2026-10-24): "let Inspiration build the routes".** The Inspiration session builds
+Superseded the same day: **Ruling (Krish, 2026-10-24): "you build them"**. This session builds the three routes in
+content-engine. The earlier ruling, kept for the record, was **Ruling (Krish, 2026-10-24): "let Inspiration build
+the routes"**, under which The Inspiration session builds
 `POST /api/watch/claim`, `/api/watch/report` and `/api/watch/read` in content-engine exactly from `docs/WATCH_API.md`.
-This repository builds and tests the client against that spec, and asks for a spec change by message, never by
-editing content-engine.
+this repository would have built only the client.
