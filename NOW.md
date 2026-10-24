@@ -36,8 +36,8 @@ Lifecycle: live. The detail is in `README.md`.
 
 ## What is next and what is waiting on Krish
 
-- **Waiting on Krish: D1** (asked 2026-10-24): may the watcher file fetched media into his Drive folders where his own drops go? Until yes, filing stays on the home computer, and a pasted link shows only as a "watching" card: the taste ledger makes a real card only from a file in one of the two Drive folders. Then D2 (his Firefox session or Apify with a standing monthly cap) and D3 (the North Star for the renamed repository), one at a time.
-- **Waiting on Krish: allow adding `krishanraja/content-engine` to the build session.** The permission classifier refused `add_repo`, so the two engine routes (`/api/watch/claim`, `/api/watch/report`, plus `/api/watch/read`) are designed (`docs/WATCH_API.md`) but not built. Nothing reaches the queue until they are. The Inspiration session (which has content-engine attached) offered on 2026-10-24 to build them exactly from `docs/WATCH_API.md` if Krish prefers that to widening this session; his call.
+- **D1 answered** (2026-10-24, "Yes to Drive filing"): fetched media files into his two Drive folders. **Waiting on Krish: D2** (his Firefox session or Apify with a standing monthly cap), then D3 (the North Star).
+- **Engine routes: the Inspiration session builds them** (Krish, 2026-10-24) from `docs/WATCH_API.md`. Nothing reaches the queue until they merge; check content-engine's open pull requests.
 - Checkpoint still open (brief section 10 step 2): read one real saved video from his Inspiration folder and compare its `read.md` token count with the taste ledger's eight 512px frames. Needs the home computer or his go-ahead to read one Drive file.
 - Live fetch once per platform on the home computer, with his yes. Then install the scheduled task on both home computers: `powershell -ExecutionPolicy Bypass -File scripts\install-content-watch.ps1 -CheckOnly`, then without `-CheckOnly`; readback is `content-watch doctor` and `Get-ScheduledTask "Mindmake Content Watcher"`.
 - YouTube and LinkedIn chains wait for the Inspiration session's verified research run.

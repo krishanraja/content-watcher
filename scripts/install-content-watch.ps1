@@ -17,7 +17,11 @@ param(
   [switch]$CheckOnly,
   [string]$Python = "py",
   [string]$PythonVersion = "-3.12",
-  [string]$TaskName = "Mindmake Content Watcher"
+  [string]$TaskName = "Mindmake Content Watcher",
+  # The synced Drive folders, found on this machine (never guessed):
+  #   makeyourmindup > Video Engine > Inspiration, and Cold Ideas & Inspo.
+  [string]$VideoInspiration,
+  [string]$ColdIdeas
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,7 +47,17 @@ $null = cmdkey /list:Mindmake/engine-operator-token 2>$null
 $keyOk = ($LASTEXITCODE -eq 0) -and ((cmdkey /list:Mindmake/engine-operator-token) -match "Mindmake/engine-operator-token")
 Check "engine key" $keyOk ($(if ($keyOk) { "present" } else { "store it as the generic credential Mindmake/engine-operator-token" }))
 
-# 4. Optional pieces: named, never blocking.
+# 4. The two Drive folders fetched media is filed into (D1). Taken from the parameters, or from an earlier install.
+$configPath = Join-Path $env:LOCALAPPDATA "content-watcher\config.json"
+if (Test-Path $configPath) {
+  $saved = Get-Content $configPath -Raw | ConvertFrom-Json
+  if (-not $VideoInspiration) { $VideoInspiration = $saved.video_inspiration }
+  if (-not $ColdIdeas) { $ColdIdeas = $saved.cold_ideas }
+}
+Check "Inspiration folder" ($VideoInspiration -and (Test-Path -LiteralPath $VideoInspiration -PathType Container)) ($(if ($VideoInspiration) { $VideoInspiration } else { "pass -VideoInspiration with the synced path of makeyourmindup > Video Engine > Inspiration" }))
+Check "Cold Ideas folder" ($ColdIdeas -and (Test-Path -LiteralPath $ColdIdeas -PathType Container)) ($(if ($ColdIdeas) { $ColdIdeas } else { "pass -ColdIdeas with the synced path of Cold Ideas & Inspo" }))
+
+# 5. Optional pieces: named, never blocking.
 $tess = Get-Command tesseract -ErrorAction SilentlyContinue
 if (-not $tess) { Write-Host "no       tesseract              words on screen will not be read (winget install UB-Mannheim.TesseractOCR)" }
 $deno = Get-Command deno -ErrorAction SilentlyContinue
@@ -56,18 +70,19 @@ if ($missing.Count -gt 0) {
 }
 if ($CheckOnly) { Write-Host ""; Write-Host "Everything required is here. Run again without -CheckOnly to install."; exit 0 }
 
-# 5. Install the package and its watch extras.
+# 6. Install the package and its watch extras.
 & $Python $PythonVersion -m pip install --upgrade --quiet -e "$repo[watch]"
 if ($LASTEXITCODE -ne 0) { Write-Host "pip install failed; nothing was registered."; exit 1 }
+& $Python $PythonVersion -m content_watcher config --filing drive --video-inspiration "$VideoInspiration" --cold-ideas "$ColdIdeas" | Out-Null
 
-# 6. Register the scheduled task: every minute, hidden, whether or not anyone is signed in to the desktop session.
+# 7. Register the scheduled task: every minute, hidden, whether or not anyone is signed in to the desktop session.
 $pythonw = & $Python $PythonVersion -c "import sys, pathlib; p = pathlib.Path(sys.executable); print(p.with_name('pythonw.exe') if p.with_name('pythonw.exe').exists() else p)"
 $action = New-ScheduledTaskAction -Execute $pythonw -Argument "-m content_watcher watch --once" -WorkingDirectory $repo
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
 $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Description "Reads every link Krish pastes and every file he drops into text, on this machine." -Force | Out-Null
 
-# 7. Readback.
+# 8. Readback.
 $task = Get-ScheduledTask -TaskName $TaskName
 Write-Host ""
 Write-Host ("Scheduled task '{0}': {1}" -f $TaskName, $task.State)

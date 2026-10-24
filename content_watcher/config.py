@@ -21,9 +21,9 @@ def state_dir() -> Path:
 
 @dataclass
 class Config:
-    # Where fetched media is filed. "local" keeps it on this machine (until D1 is answered);
-    # "drive" files into the two synced Drive folders below.
-    filing: str = "local"
+    # Where fetched media is filed. "drive" files into the two synced Drive folders below, where Krish's own
+    # drops go (D1, Krish 2026-10-24: "Yes to Drive filing"). "local" keeps it on this machine only.
+    filing: str = "drive"
     video_inspiration: str | None = None  # synced path of makeyourmindup > Video Engine > Inspiration
     cold_ideas: str | None = None  # synced path of Cold Ideas & Inspo
     # How Instagram and LinkedIn are fetched (D2): Firefox profile names allowed for cookies, per platform.

@@ -32,7 +32,10 @@ From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the wo
 
 - **D1. Where fetched media is filed.** Asked 2026-10-24. Best guess put to him: file it in his Drive, in the same
   folders his own drops go to (videos into `Video Engine > Inspiration`, everything else into `Cold Ideas & Inspo`).
-  Answer: waiting. Until he answers, `filing` is `local` (on the home computer only) and nothing writes into his Drive.
+  **Ruling (Krish, 2026-10-24): "Yes to Drive filing".** `filing` now defaults to `drive`; the installer requires
+  both synced folder paths and checks they exist. The watcher only adds files there: never deletes, never
+  overwrites, and the same post twice is a no-op. The first real write into his Drive still waits for his yes on the
+  live end-to-end run.
 - **D2. How Instagram and LinkedIn are fetched** (his signed-in Firefox session, or Apify with a standing monthly cap).
   To ask after D1. Until then Apify is off (`apify_enabled: false`) and no cookies are used.
 - **D3. The North Star for the renamed repository.** To ask after D2.
@@ -49,3 +52,10 @@ Why: a drop has no request id, and `report`'s job is moving one request through 
 Decision: a request's `status_class` is one of `login_wall`, `not_found`, `too_big`, `blocked`, `timeout`, `other`,
 the classes Control Center puts into words. The finer reason (for example `spend_not_approved`,
 `empty_media_response`) stays in the local log as a count, never on the request. Told the Inspiration session.
+
+## 2026-10-24: The Inspiration session builds the engine routes
+
+**Ruling (Krish, 2026-10-24): "let Inspiration build the routes".** The Inspiration session builds
+`POST /api/watch/claim`, `/api/watch/report` and `/api/watch/read` in content-engine exactly from `docs/WATCH_API.md`.
+This repository builds and tests the client against that spec, and asks for a spec change by message, never by
+editing content-engine.

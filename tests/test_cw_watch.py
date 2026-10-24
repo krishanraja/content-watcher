@@ -90,6 +90,14 @@ class FilingTests(unittest.TestCase):
         self.assertEqual(folder_for("carousel", "production"), "video_inspiration")
         self.assertEqual(folder_for("video", "strategy"), "cold_ideas")
 
+    def test_drive_is_the_default_and_needs_its_folders_set(self):
+        clip = self.root / "tiktok_1.mp4"
+        clip.write_bytes(b"x")
+        self.assertEqual(Config().filing, "drive")
+        with self.assertRaises(FilingError) as failure:
+            file_post(Post("tiktok", "u", "1", media=[clip]), Config())
+        self.assertEqual(failure.exception.status_class, "folder_not_set")
+
     def test_drive_filing_needs_the_folder_to_exist(self):
         clip = self.root / "tiktok_1.mp4"
         clip.write_bytes(b"x")

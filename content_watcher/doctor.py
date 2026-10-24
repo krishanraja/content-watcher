@@ -77,7 +77,7 @@ def checks(config: Config) -> list[dict]:
         profile = config.cookies.get(platform)
         add(f"cookies {platform}", bool(profile), f"Firefox profile '{profile}'" if profile else "none (logged out only)",
             f"{platform} posts behind a login")
-    add("filing", True, config.filing + (" (on this machine only until D1 is answered)" if config.filing == "local" else ""),
+    add("filing", True, config.filing + (" (on this machine only)" if config.filing == "local" else " (the two Drive folders)"),
         "where fetched media goes")
     for folder, value in (("video_inspiration", config.video_inspiration), ("cold_ideas", config.cold_ideas)):
         exists = bool(value) and Path(value).is_dir()
