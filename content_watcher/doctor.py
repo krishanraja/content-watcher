@@ -55,7 +55,7 @@ def checks(config: Config) -> list[dict]:
     add("tesseract", bool(tesseract), tesseract or "missing: install Tesseract OCR and put it on PATH",
         "words on screen and on slides")
     ytdlp = tools.tool_version("yt-dlp")
-    add("yt-dlp", at_least(ytdlp, "2026.10.21"), ytdlp or "missing: pip install -U \"yt-dlp[default,curl-cffi]\"",
+    add("yt-dlp", at_least(ytdlp, "2026.10.21"), ytdlp or "missing: install yt-dlp 2026.10.21 by hand (its changelog warns against the -U self-updater)",
         "Instagram reels, TikTok and YouTube videos")
     gallery = tools.tool_version("gallery-dl")
     add("gallery-dl", at_least(gallery, "1.32.17"), gallery or "missing: pip install -U gallery-dl",
@@ -63,6 +63,13 @@ def checks(config: Config) -> list[dict]:
     curl_cffi = _module_version("curl_cffi")
     add("curl_cffi", bool(curl_cffi), curl_cffi or "missing: pip install curl_cffi==0.16.0",
         "yt-dlp browser impersonation (Instagram, TikTok)")
+    try:
+        from importlib.metadata import version as _dist_version
+        bgutil = _dist_version("bgutil-ytdlp-pot-provider")
+    except Exception:  # noqa: BLE001
+        bgutil = None
+    add("bgutil PO token", bool(bgutil), bgutil or "missing: pip install bgutil-ytdlp-pot-provider (and its local server)",
+        "YouTube from the home connection")
     deno = tools.tool_version("deno")
     add("deno", bool(deno), deno or "missing: install deno (winget install DenoLand.Deno)", "YouTube's player challenge")
     add("engine key", bool(secrets.engine_token()), "present" if secrets.engine_token() else
