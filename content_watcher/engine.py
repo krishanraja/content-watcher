@@ -36,6 +36,7 @@ class Engine:
             with self.opener.open(request, timeout=self.timeout) as response:
                 raw = response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
+            exc.close()
             raise EngineError({401: "engine_refused_key", 403: "engine_refused_key", 404: "engine_route_missing",
                                413: "engine_body_too_big"}.get(exc.code, f"engine_http_{exc.code}")) from None
         except (socket.timeout, TimeoutError):

@@ -64,23 +64,28 @@ def handle_request(request: dict, config: Config, engine: Engine, state: State, 
     shutil.rmtree(work, ignore_errors=True)
 
 
-def drop_candidates(config: Config, state: State) -> list[tuple[Path, str, str]]:
-    found = []
+def drop_candidates(config: Config, state: State, limit: int = DROP_LIMIT) -> list[tuple[Path, str, str]]:
+    """Newest unread files first, stopping at the limit: hashing a Drive file can mean downloading it."""
+    files = []
     for folder in FOLDERS:
         value = config.video_inspiration if folder == "video_inspiration" else config.cold_ideas
         if not value or not Path(value).is_dir():
             continue
-        for path in sorted(Path(value).iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
-            if not path.is_file() or path.name.startswith(".") or kind_of(path) not in ("video", "image", "text"):
-                continue
-            sha = state.sha_of(path)
-            if not state.read_sent(sha, ENGINE_REV):
-                found.append((path, sha, folder))
+        for path in Path(value).iterdir():
+            if path.is_file() and not path.name.startswith(".") and kind_of(path) in ("video", "image", "text"):
+                files.append((path.stat().st_mtime, path, folder))
+    found = []
+    for _mtime, path, folder in sorted(files, key=lambda item: item[0], reverse=True):
+        sha = state.sha_of(path)
+        if not state.read_sent(sha, ENGINE_REV):
+            found.append((path, sha, folder))
+            if len(found) >= limit:
+                break
     return found
 
 
 def read_drops(config: Config, engine: Engine, state: State, counts: Counter, limit: int = DROP_LIMIT) -> None:
-    for path, sha, _folder in drop_candidates(config, state)[:limit]:
+    for path, sha, _folder in drop_candidates(config, state, limit):
         try:
             readings = read_path(path, out=state_dir() / "readings" / "drops", whisper_model=config.whisper_model)
         except Exception:  # noqa: BLE001 - one bad file must not stop the run
