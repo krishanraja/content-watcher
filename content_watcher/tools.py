@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
 import subprocess
 import sys
@@ -24,6 +25,21 @@ class Ran:
     timed_out: bool = False
 
 
+def _windows_installs(name: str) -> list[Path]:
+    """Where the Windows installers put tools that do not always reach PATH: Tesseract's
+    installer leaves PATH alone, and winget's Poppler changes PATH only for shells opened later."""
+    found: list[Path] = []
+    for root in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")):
+        if root:
+            found.append(Path(root) / "Tesseract-OCR" / f"{name}.exe")
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        packages = Path(local) / "Microsoft" / "WinGet" / "Packages"
+        if packages.is_dir():
+            found.extend(sorted(packages.glob(f"oschwartz10612.Poppler_*/poppler-*/Library/bin/{name}.exe"), reverse=True))
+    return found
+
+
 def which(name: str) -> str | None:
     if name in ("ffmpeg", "ffprobe"):
         try:
@@ -38,6 +54,10 @@ def which(name: str) -> str | None:
     for candidate in (scripts / name, scripts / f"{name}.exe", scripts / "Scripts" / f"{name}.exe"):
         if candidate.is_file():
             return str(candidate)
+    if sys.platform == "win32":
+        for candidate in _windows_installs(name):
+            if candidate.is_file():
+                return str(candidate)
     return None
 
 
