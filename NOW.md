@@ -34,6 +34,7 @@ Lifecycle: live. The detail is in `README.md`.
 
 ## What is next and what is waiting on Krish
 
+- Build content-watcher from [`docs/BRIEF.md`](docs/BRIEF.md) (written 2026-10-24): the link Krish pastes on the Inspiration board becomes a filed post, a text reading made on his machine, and a card. Waiting on Krish first: D1 (where fetched media is filed), D2 (how Instagram and LinkedIn are fetched), D3 (the North Star for the renamed repository).
 - Measure the North Star number and record it on the first line under "Where it is right now".
 - North Star check (2026-10-23): holds.
 
