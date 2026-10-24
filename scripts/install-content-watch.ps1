@@ -43,8 +43,8 @@ $ffmpeg = Get-Command ffmpeg -ErrorAction SilentlyContinue
 Check "ffmpeg" ([bool]$ffmpeg) ($(if ($ffmpeg) { $ffmpeg.Source } else { "winget install Gyan.FFmpeg, then open a new terminal" }))
 
 # 3. The engine key in Windows Credential Manager (never printed).
-$null = cmdkey /list:Mindmake/engine-operator-token 2>$null
-$keyOk = ($LASTEXITCODE -eq 0) -and ((cmdkey /list:Mindmake/engine-operator-token) -match "Mindmake/engine-operator-token")
+$keyList = (cmdkey /list:Mindmake/engine-operator-token | Out-String)
+$keyOk = $keyList -match "Mindmake/engine-operator-token"
 Check "engine key" $keyOk ($(if ($keyOk) { "present" } else { "store it as the generic credential Mindmake/engine-operator-token" }))
 
 # 4. The two Drive folders fetched media is filed into (D1). Taken from the parameters, or from an earlier install.
@@ -61,7 +61,7 @@ Check "Cold Ideas folder" ($ColdIdeas -and (Test-Path -LiteralPath $ColdIdeas -P
 $tess = Get-Command tesseract -ErrorAction SilentlyContinue
 if (-not $tess) { Write-Host "no       tesseract              words on screen will not be read (winget install UB-Mannheim.TesseractOCR)" }
 $deno = Get-Command deno -ErrorAction SilentlyContinue
-if (-not $deno) { Write-Host "no       deno                   YouTube may refuse downloads (winget install DenoLand.Deno)" }
+if (-not $deno) { Write-Host "no       deno                   the install adds it through yt-dlp; if doctor still says no: winget install DenoLand.Deno" }
 
 if ($missing.Count -gt 0) {
   Write-Host ""
@@ -78,23 +78,31 @@ if ($LASTEXITCODE -ne 0) { Write-Host "pip install failed; nothing was registere
 # 6b. YouTube's token helper (bgutil) and, optionally, cobalt, when Docker is here. Both listen on this machine only.
 $docker = Get-Command docker -ErrorAction SilentlyContinue
 if ($docker) {
-  $running = (docker ps --format "{{.Names}}" 2>$null)
+  # Docker writes progress to stderr; Windows PowerShell would treat that as a stop, so these run with Continue.
+  $ErrorActionPreference = "Continue"
+  $running = @(docker ps --format "{{.Names}}" 2>$null)
   if ($running -notcontains "bgutil-provider") {
-    docker rm -f bgutil-provider 2>$null | Out-Null
-    docker run --name bgutil-provider -d --init --restart unless-stopped -p 127.0.0.1:4416:4416 brainicism/bgutil-ytdlp-pot-provider | Out-Null
+    $existing = @(docker ps -a --format "{{.Names}}" 2>$null)
+    if ($existing -contains "bgutil-provider") { docker rm -f bgutil-provider *> $null }
+    docker run --name bgutil-provider -d --init --restart unless-stopped -p 127.0.0.1:4416:4416 brainicism/bgutil-ytdlp-pot-provider *> $null
   }
-  Push-Location (Join-Path $repo "scripts\cobalt"); docker compose up -d 2>$null | Out-Null; Pop-Location
+  Push-Location (Join-Path $repo "scripts\cobalt"); docker compose up -d *> $null; Pop-Location
+  $ErrorActionPreference = "Stop"
   & $Python $PythonVersion -m content_watcher config --cobalt-url "http://localhost:9000" | Out-Null
+  Write-Host "ok       docker                 YouTube's token helper and cobalt started (they come back after a restart)"
 } else {
   Write-Host "no       docker                 YouTube's token helper and cobalt need Docker Desktop (winget install Docker.DockerDesktop); the other steps still run"
 }
 # The headless browser for Instagram's embed backup.
-& $Python $PythonVersion -m playwright install chromium | Out-Null
+$ErrorActionPreference = "Continue"
+& $Python $PythonVersion -m playwright install chromium *> $null
+$ErrorActionPreference = "Stop"
 
-# 7. Register the scheduled task: every minute, hidden, whether or not anyone is signed in to the desktop session.
+# 7. Register the scheduled task: every minute, hidden, while Krish is signed in (it reads the engine key from his
+#    Credential Manager, so it runs as him).
 $pythonw = & $Python $PythonVersion -c "import sys, pathlib; p = pathlib.Path(sys.executable); print(p.with_name('pythonw.exe') if p.with_name('pythonw.exe').exists() else p)"
 $action = New-ScheduledTaskAction -Execute $pythonw -Argument "-m content_watcher watch --once" -WorkingDirectory $repo
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Days 3650)
 $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Description "Reads every link Krish pastes and every file he drops into text, on this machine." -Force | Out-Null
 
