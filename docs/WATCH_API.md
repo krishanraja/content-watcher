@@ -17,7 +17,7 @@ Atomically claims up to `limit` requests that are `queued`, or `claimed` more th
 Body: `{ "id", "machine", "status", "status_class"?, "shape"?, "media"?, "reads"? }`
 
 - `status: "filed"` with `shape` and `media`: one entry per filed file, in post order:
-  `{ "name", "sha256", "mime", "bytes", "folder" }`, `folder` being `video_inspiration` or `cold_ideas`.
+  `{ "name", "sha256", "mime", "bytes", "folder" }`, `folder` being `video_inspiration` (Drive > Ventures > Inspiration > Production Inspo, `1QxrzxISYFXq0er0DG0XSapm7qhvuRmh-`) or `cold_ideas` (Content Inspo, `1FNztJOU82M8zb6IIbUAbvuI6Kr0pF5Hu`). The values are the old folder names, kept because the database and the taste ledger carry them.
 - `status: "read"` with `media` and `reads`: one `content_reads` row per file
   `{ "sha256", "source_url", "platform", "shape", "engine_rev", "read", "read_md" }`. The route upserts each row by
   `sha256` (a newer `engine_rev` replaces an older one, an older one never replaces a newer one) and sets the

@@ -19,6 +19,8 @@ content-watch watch --once          # claim pasted links, fetch, file, read, rep
 - Install on a Windows home computer (checks first, installs nothing if a piece is missing):
   `powershell -ExecutionPolicy Bypass -File scripts\install-content-watch.ps1 -CheckOnly`, then without `-CheckOnly`.
 
+Fetched media is filed into Drive > Ventures > Inspiration: Production Inspo or Content Inspo.
+
 Settings live in `%LOCALAPPDATA%\content-watcher\config.json` (`content-watch config --help`); keys are read from
 Windows Credential Manager (`Mindmake/engine-operator-token`, `Mindmake/apify-token`) and never printed. The log there
 carries counts and class names only.

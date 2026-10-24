@@ -30,6 +30,8 @@ Lifecycle: live. The detail is in `README.md`.
 
 ## What changed recently
 
+- 2026-10-24 **The inspiration folders moved** (Krish: "Can you ensure absolutely everywhere recalibrates to this moving forward first?"). Fetched media now files into Drive > Ventures > Inspiration: Production Inspo or Content Inspo. The installer takes `-ProductionInspo` and `-ContentInspo`. The same correction went to content-engine, Control Center and inspirationhouse (whose video folder ID had gone dead).
+
 - 2026-10-24 **Instagram and YouTube Shorts made reliable** (Krish: "Instagram and YouTube Shorts are the main ones, you need to find a reliable way"). Instagram now starts with its own embed player, which answers logged out and carries the post's data: tested live from a cloud machine on a reel, a three-video carousel and a photo post, and a full fetch and reading through `content-watch`. Licensed-music reels go on to Apify; if everything misses, the cover and caption still make a card. Shorts: the installer starts YouTube's token helper (Docker) and cobalt, and Apify gets a Short at 720p for about $0.02 when YouTube refuses. 78 tests pass.
 
 - 2026-10-24 **Every fallback built** (Krish: "Build all the fallbacks. This needs to be bulletproof."). Each platform now has four to seven ways in, free first, then Apify under the $5 cap, then words alone as a text card: Instaloader for Instagram; TikWM and Tikmate for TikTok (TikWM tested live); an oEmbed check, youtube-transcript-api and Apify transcripts for YouTube; document posts, two Apify actors and Jina Reader for LinkedIn; and an optional cobalt on the home computer for every platform. Video is capped at 720p. PDFs are read page by page. The chains: `docs/FALLBACKS.md`. 71 tests pass; no live run at home yet.
