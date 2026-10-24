@@ -1,3 +1,30 @@
+# Content Watcher
+
+Anything Krish points at, a link to a post or a file he drops, becomes a full text reading on his own machine, with no
+model watching it. The same repository still holds the video compression engine below; his own recordings need both.
+
+## Content Watcher in one minute
+
+```sh
+pip install -e ".[watch]"          # faster-whisper, OpenCV, yt-dlp, gallery-dl
+content-watch doctor                # what this machine can and cannot do, naming each missing piece
+content-watch read path/to/video.mp4 --out readings      # read.json + read.md, measured locally
+content-watch fetch "https://www.tiktok.com/@a/video/1" --out fetched
+content-watch watch --once          # claim pasted links, fetch, file, read, report; then read new drops
+```
+
+- What a reading holds: [`docs/READ_FORMAT.md`](docs/READ_FORMAT.md).
+- How the home computers reach the system: [`docs/WATCH_API.md`](docs/WATCH_API.md).
+- The build brief and the decisions only Krish makes: [`docs/BRIEF.md`](docs/BRIEF.md), [`docs/DECISIONS.md`](docs/DECISIONS.md).
+- Install on a Windows home computer (checks first, installs nothing if a piece is missing):
+  `powershell -ExecutionPolicy Bypass -File scripts\install-content-watch.ps1 -CheckOnly`, then without `-CheckOnly`.
+
+Settings live in `%LOCALAPPDATA%\content-watcher\config.json` (`content-watch config --help`); keys are read from
+Windows Credential Manager (`Mindmake/engine-operator-token`, `Mindmake/apify-token`) and never printed. The log there
+carries counts and class names only.
+
+---
+
 # Video Compression Engine
 
 Compress large videos locally, estimate the result before a long encode, and optionally let ChatGPT Work review the content and extract useful clips.

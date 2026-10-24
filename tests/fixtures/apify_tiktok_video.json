@@ -1,0 +1,24 @@
+[
+ {
+  "id": "7430000000000000005",
+  "text": "talking head",
+  "createTimeISO": "2026-10-22T08:00:00.000Z",
+  "authorMeta": {
+   "name": "tt.video"
+  },
+  "diggCount": 5,
+  "playCount": 99,
+  "mediaUrls": [
+   "https://api.apify.example/v2/key-value-stores/k/records/video.mp4"
+  ],
+  "videoMeta": {
+   "downloadAddr": "https://v16.tiktok.example/x.mp4",
+   "subtitleLinks": [
+    {
+     "language": "eng-US",
+     "downloadLink": "https://api.apify.example/sub.vtt"
+    }
+   ]
+  }
+ }
+]

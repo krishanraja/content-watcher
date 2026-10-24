@@ -1,0 +1,14 @@
+[
+ {
+  "shortCode": "DReel00001",
+  "type": "Video",
+  "ownerUsername": "reel.example",
+  "timestamp": "2026-10-21T10:00:00.000Z",
+  "caption": "Watch the zoom",
+  "likesCount": 10,
+  "commentsCount": -1,
+  "videoPlayCount": 3000,
+  "videoUrl": "https://scontent.cdninstagram.example/r.mp4",
+  "downloadedVideo": "https://api.apify.example/v2/key-value-stores/s/records/r.mp4"
+ }
+]
