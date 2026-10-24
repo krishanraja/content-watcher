@@ -12,6 +12,8 @@ This repository's North Star is [`docs/NORTH_STAR.md`](docs/NORTH_STAR.md): an a
 - Only Krish changes it.
 <!-- north-star:end -->
 
+**The content-watcher build (Krish, 2026-10-24).** This repository was renamed from video-compression to content-watcher, and Krish asked for it to be built out in full: fetching posts from TikTok, Instagram, YouTube and LinkedIn from a link he pastes, and reading any video, carousel or post into text on his own machine. Before any work on that, read [`docs/BRIEF.md`](docs/BRIEF.md) in full; it starts with three decisions only he makes.
+
 When a user asks to compress a video, including the phrase "Need to compress a video", use the repository skill at `.agents/skills/video-compression/SKILL.md`.
 
 The user-facing workflow is more important than code changes. Do not edit this engine unless the user asks to change the engine itself. For an ordinary compression request, guide the user in chat, run the local CLI, verify every output, and return clickable absolute paths.
