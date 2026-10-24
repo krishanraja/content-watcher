@@ -100,8 +100,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     config = sub.add_parser("config", help="set this machine's settings")
     config.add_argument("--filing", choices=("local", "drive"))
-    config.add_argument("--video-inspiration", dest="video_inspiration")
-    config.add_argument("--cold-ideas", dest="cold_ideas")
+    config.add_argument("--production-inspo", "--video-inspiration", dest="video_inspiration",
+                        help="synced path of Ventures > Inspiration > Production Inspo")
+    config.add_argument("--content-inspo", "--cold-ideas", dest="cold_ideas",
+                        help="synced path of Ventures > Inspiration > Content Inspo")
     config.add_argument("--engine-url", dest="engine_url")
     config.add_argument("--machine")
     config.add_argument("--whisper-model", dest="whisper_model")

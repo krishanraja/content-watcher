@@ -135,8 +135,8 @@ class WatchOnceTests(unittest.TestCase):
         self.env = mock.patch.dict(os.environ, {"CONTENT_WATCH_HOME": str(self.root / "home"),
                                                 "MINDMAKE_ENGINE_TOKEN": "test-key"})
         self.env.start()
-        self.videos = self.root / "Inspiration"
-        self.cold = self.root / "Cold Ideas & Inspo"
+        self.videos = self.root / "Production Inspo"
+        self.cold = self.root / "Content Inspo"
         self.videos.mkdir()
         self.cold.mkdir()
         self.config = Config(filing="drive", video_inspiration=str(self.videos), cold_ideas=str(self.cold),

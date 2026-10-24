@@ -19,6 +19,8 @@ class FilingError(RuntimeError):
 
 
 def folder_for(shape: str, lane: str | None) -> str:
+    """video_inspiration is Production Inspo, cold_ideas is Content Inspo (Ventures > Inspiration, since 2026-10-24).
+    The lane Krish chose wins; with none, a video goes to Production Inspo and anything else to Content Inspo."""
     if lane == "production":
         return "video_inspiration"
     if lane == "strategy":

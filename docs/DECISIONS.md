@@ -83,3 +83,16 @@ So: Instagram starts with its own embed player, which answers logged out and car
 and ends with the cover picture and caption so a link never comes to nothing; YouTube Shorts get the home computers'
 full setup (Deno and the bgutil token helper, started by the installer) and a paid Apify backstop of about $0.02 a
 Short under the $5 cap. Details: `docs/FALLBACKS.md`.
+
+## 2026-10-24: The inspiration folders moved to Ventures > Inspiration
+
+**Ruling (Krish, 2026-10-24): "Can you ensure absolutely everywhere recalibrates to this moving forward first?" and
+"make sure control center and every other place that needs these folders is corrected too".**
+
+Krish keeps inspiration in Drive > Ventures > Inspiration, in two folders: **Production Inspo**
+(`1QxrzxISYFXq0er0DG0XSapm7qhvuRmh-`, the production quality he likes; it took the clips of Video Engine > Inspiration,
+which is gone) and **Content Inspo** (`1FNztJOU82M8zb6IIbUAbvuI6Kr0pF5Hu`, the content he likes; once Cold Ideas &
+Inspo). Fetched media is filed into one or the other: the lane he chose, else a video into Production Inspo and
+anything else into Content Inspo. The installer takes `-ProductionInspo` and `-ContentInspo`; the old flag names still
+work. The contract's folder values (`video_inspiration`, `cold_ideas`) stay. The same change went to content-engine,
+Control Center and inspirationhouse.

@@ -18,10 +18,10 @@ param(
   [string]$Python = "py",
   [string]$PythonVersion = "-3.12",
   [string]$TaskName = "Mindmake Content Watcher",
-  # The synced Drive folders, found on this machine (never guessed):
-  #   makeyourmindup > Video Engine > Inspiration, and Cold Ideas & Inspo.
-  [string]$VideoInspiration,
-  [string]$ColdIdeas
+  # The two synced Drive folders in Ventures > Inspiration, found on this machine (never guessed):
+  #   Production Inspo (production quality he likes) and Content Inspo (the content he likes).
+  [Alias("VideoInspiration")][string]$ProductionInspo,
+  [Alias("ColdIdeas")][string]$ContentInspo
 )
 
 $ErrorActionPreference = "Stop"
@@ -51,11 +51,11 @@ Check "engine key" $keyOk ($(if ($keyOk) { "present" } else { "store it as the g
 $configPath = Join-Path $env:LOCALAPPDATA "content-watcher\config.json"
 if (Test-Path $configPath) {
   $saved = Get-Content $configPath -Raw | ConvertFrom-Json
-  if (-not $VideoInspiration) { $VideoInspiration = $saved.video_inspiration }
-  if (-not $ColdIdeas) { $ColdIdeas = $saved.cold_ideas }
+  if (-not $ProductionInspo) { $ProductionInspo = $saved.video_inspiration }
+  if (-not $ContentInspo) { $ContentInspo = $saved.cold_ideas }
 }
-Check "Inspiration folder" ($VideoInspiration -and (Test-Path -LiteralPath $VideoInspiration -PathType Container)) ($(if ($VideoInspiration) { $VideoInspiration } else { "pass -VideoInspiration with the synced path of makeyourmindup > Video Engine > Inspiration" }))
-Check "Cold Ideas folder" ($ColdIdeas -and (Test-Path -LiteralPath $ColdIdeas -PathType Container)) ($(if ($ColdIdeas) { $ColdIdeas } else { "pass -ColdIdeas with the synced path of Cold Ideas & Inspo" }))
+Check "Production Inspo" ($ProductionInspo -and (Test-Path -LiteralPath $ProductionInspo -PathType Container)) ($(if ($ProductionInspo) { $ProductionInspo } else { "pass -ProductionInspo with the synced path of Ventures > Inspiration > Production Inspo" }))
+Check "Content Inspo" ($ContentInspo -and (Test-Path -LiteralPath $ContentInspo -PathType Container)) ($(if ($ContentInspo) { $ContentInspo } else { "pass -ContentInspo with the synced path of Ventures > Inspiration > Content Inspo" }))
 
 # 5. Optional pieces: named, never blocking.
 $tess = Get-Command tesseract -ErrorAction SilentlyContinue
@@ -73,7 +73,7 @@ if ($CheckOnly) { Write-Host ""; Write-Host "Everything required is here. Run ag
 # 6. Install the package and its watch extras.
 & $Python $PythonVersion -m pip install --upgrade --quiet -e "$repo[watch]"
 if ($LASTEXITCODE -ne 0) { Write-Host "pip install failed; nothing was registered."; exit 1 }
-& $Python $PythonVersion -m content_watcher config --filing drive --video-inspiration "$VideoInspiration" --cold-ideas "$ColdIdeas" | Out-Null
+& $Python $PythonVersion -m content_watcher config --filing drive --production-inspo "$ProductionInspo" --content-inspo "$ContentInspo" | Out-Null
 
 # 6b. YouTube's token helper (bgutil) and, optionally, cobalt, when Docker is here. Both listen on this machine only.
 $docker = Get-Command docker -ErrorAction SilentlyContinue

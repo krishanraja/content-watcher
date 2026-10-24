@@ -115,9 +115,10 @@ def checks(config: Config) -> list[dict]:
             f"{platform} posts behind a login")
     add("filing", True, config.filing + (" (on this machine only)" if config.filing == "local" else " (the two Drive folders)"),
         "where fetched media goes")
-    for folder, value in (("video_inspiration", config.video_inspiration), ("cold_ideas", config.cold_ideas)):
+    for label, flag, value in (("Production Inspo", "--production-inspo", config.video_inspiration),
+                               ("Content Inspo", "--content-inspo", config.cold_ideas)):
         exists = bool(value) and Path(value).is_dir()
-        add(f"folder {folder}", exists, value or "not set: content-watch config --" + folder.replace("_", "-") + " <path>",
+        add(f"folder {label}", exists, value or f"not set: content-watch config {flag} <synced path>",
             "filing and reading hand-dropped files", config.filing == "drive")
     add("state", True, str(state_dir()), "local log, readings and state")
     add("browser user agent", True, BROWSER_UA, "TikTok and LinkedIn page reads")
