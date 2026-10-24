@@ -58,7 +58,7 @@ def classify(text: str) -> tuple[str, str]:
     return "other", "unrecognised_error"
 
 
-MODULES = {"yt-dlp": "yt_dlp", "gallery-dl": "gallery_dl"}
+MODULES = {"yt-dlp": "yt_dlp", "gallery-dl": "gallery_dl", "instaloader": "instaloader"}
 
 
 def tool_command(name: str) -> list[str]:
@@ -150,3 +150,21 @@ def has_audio(path: Path) -> bool | None:
     ran = tools.run([ffprobe, "-v", "error", "-select_streams", "a", "-show_entries", "stream=index",
                      "-of", "csv=p=0", path], timeout=30)
     return bool(ran.stdout.strip()) if ran.returncode == 0 else None
+
+
+def text_post(post, folder: Path, *, title: str, body: str, note: str | None = None) -> Path:
+    """File a post whose media could not be had as Markdown of its words, so a pasted link still becomes a card.
+    The header lines are the ones read.reader.parse_text_post reads back."""
+    lines = [f"# {title}", ""]
+    lines.append(f"Author: {post.author or ''}")
+    lines.append(f"Posted: {post.posted_at or ''}")
+    lines.append(f"Link: {post.url}")
+    lines.append(f"Platform: {post.platform}")
+    lines += ["", body.strip()]
+    if note:
+        lines += ["", f"({note})"]
+    target = folder / f"{post.platform}_{post.post_id or 'post'}.md"
+    target.write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+    post.media = [target]
+    post.shape = "text"
+    return target

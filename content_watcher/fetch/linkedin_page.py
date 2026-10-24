@@ -12,7 +12,7 @@ from pathlib import Path
 
 from ..post import Post
 from ..urls import BROWSER_UA
-from .base import FetchFailed, download
+from .base import FetchFailed, download, text_post
 
 LD_JSON = re.compile(r'<script[^>]+type="application/ld\+json"[^>]*>(.*?)</script>', re.S)
 COMMENTARY = re.compile(r'<p[^>]*data-test-id="main-feed-activity-card__commentary"[^>]*>(.*?)</p>', re.S)
@@ -99,7 +99,83 @@ def parse_page(page: str, final_url: str = "") -> dict:
         "transcript": node.get("transcript") if isinstance(node.get("transcript"), str) else None,
         "shape": shape,
         "counts": counts,
+        "document": _document_config(page),
     }
+
+
+def _document_config(page: str) -> dict | None:
+    found = DOCUMENT.search(page)
+    if not found:
+        return None
+    try:
+        return json.loads(html.unescape(found.group(1)))
+    except ValueError:
+        return None
+
+
+def document_files(config: dict, ident: str, folder: Path, *, timeout: float = 60) -> list[Path]:
+    """A document post: its PDF, else every page image at the largest size, fetched at once because the links expire
+    within days (FETCH_METHODS.md, LinkedIn step 1, "A document")."""
+    doc = config.get("doc") or config
+    manifest_url = doc.get("manifestUrl") or config.get("manifestUrl")
+    manifest = {}
+    if manifest_url:
+        request = urllib.request.Request(manifest_url, headers={"User-Agent": BROWSER_UA})
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                manifest = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, ValueError, socket.timeout, TimeoutError):
+            manifest = {}
+    pdf = manifest.get("transcribedDocumentUrl") or doc.get("transcribedDocumentUrl")
+    if pdf:
+        try:
+            return [download(pdf, folder / f"linkedin_{ident}.pdf", timeout=120)]
+        except FetchFailed:
+            pass
+    pages: list[str] = []
+    resolutions = manifest.get("perResolutions") or []
+    if resolutions:
+        best = max(resolutions, key=lambda r: r.get("width") or 0)
+        image_manifest = best.get("imageManifestUrl")
+        if image_manifest:
+            try:
+                with urllib.request.urlopen(urllib.request.Request(image_manifest, headers={"User-Agent": BROWSER_UA}),
+                                            timeout=timeout) as response:
+                    listed = json.loads(response.read().decode("utf-8"))
+                pages = [p if isinstance(p, str) else p.get("url") for p in listed.get("pages") or listed.get("imageUrls") or []]
+            except (urllib.error.URLError, ValueError, socket.timeout, TimeoutError):
+                pages = []
+    if not pages:
+        pages = [p if isinstance(p, str) else p.get("url") for p in config.get("coverPages") or doc.get("coverPages") or []]
+    files = []
+    for index, page_url in enumerate([p for p in pages if p][:60], start=1):
+        files.append(download(page_url, folder / f"linkedin_{ident}_page{index:02d}.jpg", timeout=timeout))
+    if not files:
+        raise FetchFailed("other", "li_doc_expired")
+    return files
+
+
+def jina(url: str, post_id: str | None, folder: Path, *, timeout: float = 30) -> Post:
+    """Words only, free: Jina Reader's Markdown of the guest page (FETCH_METHODS.md, LinkedIn step 4)."""
+    request = urllib.request.Request(f"https://r.jina.ai/{url}", headers={"User-Agent": BROWSER_UA, "Accept": "text/plain"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            text = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        exc.close()
+        raise FetchFailed("blocked" if exc.code in (403, 429, 451) else "other", f"jina_http_{exc.code}") from None
+    except (socket.timeout, TimeoutError):
+        raise FetchFailed("timeout", "jina_timeout") from None
+    except urllib.error.URLError:
+        raise FetchFailed("other", "jina_unreachable") from None
+    body = text.split("Markdown Content:", 1)[-1].strip()
+    if len(body) < 40 or "sign in" in body.lower()[:400] and "join now" in body.lower()[:600]:
+        raise FetchFailed("login_wall", "li_login_only")
+    title = next((line[len("Title:"):].strip() for line in text.splitlines() if line.startswith("Title:")), None)
+    post = Post("linkedin", url, post_id or "post", title, None, body, method="jina_reader")
+    text_post(post, folder, title=f"LinkedIn post: {title or ''}".strip(), body=body,
+              note="Words only: read from the public page, no date, video or document pages.")
+    return post
 
 
 def as_markdown(post: Post) -> str:
@@ -150,6 +226,8 @@ def fetch(url: str, post_id: str | None, folder: Path, *, timeout: float = 20) -
         post.media.append(download(image_url, folder / f"linkedin_{ident}_{index:02d}.jpg", timeout=60))
     if found["video"]:
         post.media.append(download(found["video"], folder / f"linkedin_{ident}.mp4", timeout=300))
+    if found.get("document"):
+        post.media.extend(document_files(found["document"], ident, folder))
     if found["caption_url"]:
         try:
             post.captions_file = download(found["caption_url"], folder / f"linkedin_{ident}.vtt", timeout=60)

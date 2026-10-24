@@ -62,3 +62,15 @@ content-engine. The earlier ruling, kept for the record, was **Ruling (Krish, 20
 the routes"**, under which The Inspiration session builds
 `POST /api/watch/claim`, `/api/watch/report` and `/api/watch/read` in content-engine exactly from `docs/WATCH_API.md`.
 this repository would have built only the client.
+
+## 2026-10-24: Every fallback, free sites included, and 720p is enough
+
+**Ruling (Krish, 2026-10-24): "Build all the fallbacks. This needs to be bulletproof. There's got to be a tonne of
+ways to do this reliably. There are so many free sites out there that I just copy a link in, press download, and it
+lets me select the quality and whatnot. I never really need to download a high-quality video when I'm doing this
+job."**
+
+So: every chain carries every working step from `docs/FETCH_METHODS.md`, plus the free downloader services that
+answered a live test (TikWM, Tikmate) and a self-hosted cobalt for every platform; downloads are capped at 720p; and
+when no file can be had, the words are filed as a text card. The chains and what was tested: `docs/FALLBACKS.md`.
+This is also his agreement to TikWM, which the research held back until he agreed.

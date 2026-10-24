@@ -31,6 +31,9 @@ class Config:
     # Paid fallback (D2, Krish 2026-10-24: "Apify with $5 cap"): only after the free methods fail, never above the cap.
     apify_enabled: bool = True
     apify_monthly_cap_usd: float = 5.0
+    # A cobalt instance (the open-source "paste a link, pick a quality" downloader), best run on this machine:
+    # scripts/cobalt/README.md. Empty skips the step. A hosted instance's key goes in COBALT_API_KEY.
+    cobalt_url: str = ""
     engine_url: str = "https://content-engine-flame-nu.vercel.app"
     machine: str = field(default_factory=lambda: os.environ.get("COMPUTERNAME") or socket.gethostname() or "home")
     whisper_model: str = "small"

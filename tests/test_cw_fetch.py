@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 from content_watcher.config import Config
-from content_watcher.fetch import apify, base, fetch, gallerydl, linkedin_page, tiktok_page, ytdlp
+from content_watcher.fetch import apify, base, fetch, free_sites, gallerydl, instaloader_fetch, linkedin_page, tiktok_page, youtube_extra, ytdlp
 from content_watcher.fetch.base import FetchFailed
 from tests.cw_helpers import FIXTURES, FakeOpener, fake_tool, load, with_path
 
@@ -118,6 +118,70 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(wall.exception.status_class, "login_wall")
         with self.assertRaises(FetchFailed):
             linkedin_page.parse_page("<html></html>", "https://www.linkedin.com/authwall?trk=x")
+
+
+class FreeSiteTests(unittest.TestCase):
+    def test_tikwm_real_response(self):
+        meta, media, music = free_sites.tikwm_parts(load("tikwm_video.json"))
+        self.assertEqual((meta["post_id"], meta["author"]), ("6718335390845095173", "scout2015"))
+        self.assertTrue(meta["caption"].startswith("Scramble up ur name"))
+        self.assertEqual(len(media), 1)
+        self.assertEqual(media[0][1], ".mp4")
+        self.assertIsNone(music)  # a video carries its own sound
+        self.assertEqual(meta["posted_at"][:10], "2019-07-27")
+        with self.assertRaises(FetchFailed):
+            free_sites.tikwm_parts({"code": -1, "msg": "Url parsing is failed! Please check url."})
+
+    def test_tikwm_photo_post(self):
+        meta, media, music = free_sites.tikwm_parts({"code": 0, "data": {"id": "1", "images": ["https://p.example/1.jpg", "https://p.example/2.jpg"],
+                                                                         "music": "/music/x.mp3", "author": {"unique_id": "a"}}})
+        self.assertEqual([ext for _, ext in media], [".jpg", ".jpg"])
+        self.assertEqual(music, "https://www.tikwm.com/music/x.mp3")
+
+    def test_tikmate_real_lookup(self):
+        meta, video = free_sites.tikmate_parts(load("tikmate_lookup.json"))
+        self.assertEqual((meta["post_id"], meta["author"], meta["posted_at"]), ("6718335390845095173", "scout2015", "2019-07-27"))
+        self.assertTrue(video.startswith("https://tikmate.app/download/"))
+        self.assertEqual(meta["counts"]["likes"], 35200)
+
+    def test_cobalt_answers(self):
+        self.assertEqual(free_sites.cobalt_parts({"status": "tunnel", "url": "http://localhost:9000/tunnel?x", "filename": "a.mp4"}),
+                         [("http://localhost:9000/tunnel?x", ".mp4")])
+        picker = free_sites.cobalt_parts({"status": "picker", "picker": [{"type": "photo", "url": "u1"}, {"type": "video", "url": "u2"}]})
+        self.assertEqual(picker, [("u1", ".jpg"), ("u2", ".mp4")])
+        for code, expected in (("error.api.content.post.private", "login_wall"), ("error.api.content.video.unavailable", "not_found"),
+                               ("error.api.fetch.rate", "blocked"), ("error.api.content.too_long", "too_big")):
+            with self.assertRaises(FetchFailed) as failure:
+                free_sites.cobalt_parts({"status": "error", "error": {"code": code}})
+            self.assertEqual(failure.exception.status_class, expected, code)
+
+    def test_cobalt_asks_for_720p(self):
+        opener = FakeOpener({"http://localhost:9000/": b'{"status": "redirect", "url": "https://cdn.example/v.mp4", "filename": "v.mp4"}',
+                             "https://cdn.example/v.mp4": b"video"})
+        with tempfile.TemporaryDirectory() as tmp:
+            post = free_sites.cobalt("https://youtu.be/dQw4w9WgXcQ", "youtube", "dQw4w9WgXcQ", Path(tmp), "http://localhost:9000", opener=opener)
+            self.assertEqual(post.media[0].read_bytes(), b"video")
+        self.assertEqual(json.loads(opener.calls[0][1])["videoQuality"], "720")
+
+    def test_linkedin_actor_items(self):
+        harvest = apify.linkedin_parts({"content": "Decks fail on slide one.", "author": {"name": "Pat"}, "postedAt": {"date": "2026-10-19"},
+                                        "postImages": [{"url": "https://media.example/1.jpg"}], "engagement": {"likes": 5, "comments": 1},
+                                        "document": {"transcribedDocumentUrl": "https://media.example/doc.pdf"}})
+        self.assertEqual((harvest["author"], harvest["posted_at"], harvest["pdf"]), ("Pat", "2026-10-19", "https://media.example/doc.pdf"))
+        supreme = apify.linkedin_parts({"text": "Watch this", "author": {"name": "Maker"}, "postedAtISO": "2026-10-18T09:00:00Z",
+                                        "linkedinVideo": {"videoPlayMetadata": {"progressiveStreams": [
+                                            {"height": 1080, "streamingLocations": [{"url": "https://v.example/1080.mp4"}]},
+                                            {"height": 720, "streamingLocations": [{"url": "https://v.example/720.mp4"}]}]}}})
+        self.assertEqual(supreme["video"], "https://v.example/720.mp4")  # 720p is enough
+        with self.assertRaises(FetchFailed):
+            apify.linkedin_parts({"text": "  "})
+
+    def test_instaloader_metadata(self):
+        from content_watcher.fetch.instaloader_fetch import post_from_json
+        got = post_from_json({"node": {"shortcode": "DAbC", "owner": {"username": "studio.example"}, "taken_at_timestamp": 1761235200,
+                                       "edge_media_to_caption": {"edges": [{"node": {"text": "Three edits"}}]},
+                                       "edge_media_preview_like": {"count": 42}, "video_view_count": 900}}, "u")
+        self.assertEqual((got.post_id, got.author, got.caption, got.counts), ("DAbC", "studio.example", "Three edits", {"likes": 42, "views": 900}))
 
 
 class ToolRunTests(unittest.TestCase):
@@ -334,23 +398,53 @@ class ChainTests(unittest.TestCase):
 
     def test_every_method_failing_reports_the_last_steps_class(self):
         with mock.patch.object(ytdlp, "fetch", side_effect=FetchFailed("blocked", "empty_media_response")), \
+                mock.patch.object(instaloader_fetch, "fetch", side_effect=FetchFailed("blocked", "rate_limited")), \
                 mock.patch.object(apify, "fetch", side_effect=FetchFailed("not_found", "apify_not_found")):
             result = fetch("https://www.instagram.com/reel/DAbCdEfGhIj/", self.root / "got", Config(), resolve=False)
         self.assertIsNone(result.post)
         self.assertEqual(result.status_class, "not_found")
         self.assertEqual([a.outcome for a in result.attempts],
-                         ["blocked:empty_media_response", "not_found:apify_not_found"])
+                         ["blocked:empty_media_response", "blocked:rate_limited", "not_found:apify_not_found"])
 
     def test_chains_follow_the_spec_order(self):
         from content_watcher import urls
         from content_watcher.fetch import _methods
         names = lambda link: [name for name, _ in _methods(urls.parse(link), Config())]
-        self.assertEqual(names("https://www.instagram.com/reel/DAbC/"), ["ytdlp", "apify_instagram_reel"])
-        self.assertEqual(names("https://www.instagram.com/p/CxYz/"), ["ytdlp_carousel", "apify_instagram_post"])
-        self.assertEqual(names("https://www.tiktok.com/@a/video/1"), ["ytdlp", "gallerydl", "tiktok_page", "apify_tiktok"])
-        self.assertEqual(names("https://www.tiktok.com/@a/photo/1"), ["gallerydl", "tiktok_page", "apify_tiktok"])
-        self.assertEqual(names("https://youtu.be/dQw4w9WgXcQ"), ["ytdlp", "ytdlp_mweb"])
-        self.assertEqual(names("https://www.linkedin.com/feed/update/urn:li:activity:7250000000000000000/"), ["linkedin_guest_page"])
+        self.assertEqual(names("https://www.instagram.com/reel/DAbC/"), ["ytdlp", "instaloader", "apify_instagram_reel"])
+        self.assertEqual(names("https://www.instagram.com/p/CxYz/"), ["ytdlp_carousel", "instaloader", "apify_instagram_post"])
+        self.assertEqual(names("https://www.tiktok.com/@a/video/1"),
+                         ["ytdlp", "gallerydl", "tiktok_page", "tikwm", "tikmate", "apify_tiktok"])
+        self.assertEqual(names("https://www.tiktok.com/@a/photo/1"), ["gallerydl", "tiktok_page", "tikwm", "apify_tiktok"])
+        self.assertEqual(names("https://youtu.be/dQw4w9WgXcQ"),
+                         ["yt_oembed", "ytdlp", "ytdlp_mweb", "yt_transcript_api", "apify_youtube_transcript"])
+        self.assertEqual(names("https://www.linkedin.com/feed/update/urn:li:activity:7250000000000000000/"),
+                         ["linkedin_guest_page", "apify_linkedin_harvest", "apify_linkedin_supreme", "jina_reader"])
+        with_cobalt = [name for name, _ in _methods(urls.parse("https://www.tiktok.com/@a/video/1"), Config(cobalt_url="http://localhost:9000"))]
+        self.assertLess(with_cobalt.index("cobalt"), with_cobalt.index("apify_tiktok"))  # free before paid
+
+    def test_a_removed_youtube_video_stops_at_the_check(self):
+        with mock.patch.object(youtube_extra, "oembed", side_effect=FetchFailed("not_found", "yt_not_found")), \
+                mock.patch.object(ytdlp, "fetch") as never:
+            result = fetch("https://youtu.be/dQw4w9WgXcQ", self.root / "got", Config(), resolve=False)
+        self.assertFalse(never.called)
+        self.assertEqual((result.status_class, result.detail), ("not_found", "yt_not_found"))
+
+    def test_youtube_words_become_a_text_card_when_the_video_will_not_come(self):
+        def words(url, video_id, folder, meta):
+            from content_watcher.post import Post
+            post = Post("youtube", url, video_id, meta.get("author_name"), None, meta.get("title"), method="yt_transcript_api")
+            base.text_post(post, folder, title=meta["title"], body="[0:00.0] the hook is everything")
+            return post
+        with mock.patch.object(youtube_extra, "oembed", return_value={"title": "A talk", "author_name": "Chan"}), \
+                mock.patch.object(ytdlp, "fetch", side_effect=FetchFailed("blocked", "bot_check")), \
+                mock.patch.object(youtube_extra, "transcript_api", side_effect=words):
+            result = fetch("https://youtu.be/dQw4w9WgXcQ", self.root / "got", Config(), resolve=False)
+        self.assertEqual(result.post.method, "yt_transcript_api")
+        self.assertEqual(result.post.infer_shape(), "text")
+        self.assertEqual([p.name for p in result.post.media], ["youtube_dQw4w9WgXcQ.md"])
+        text = result.post.media[0].read_text()
+        self.assertIn("Author: Chan", text)
+        self.assertIn("the hook is everything", text)
 
     def test_a_link_that_is_not_a_post_stops_at_once(self):
         with mock.patch.object(ytdlp, "fetch") as never:

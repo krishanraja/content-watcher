@@ -56,7 +56,7 @@ def _doctor(args: argparse.Namespace) -> int:
 
 def _config(args: argparse.Namespace) -> int:
     config = Config.load()
-    for field in ("filing", "video_inspiration", "cold_ideas", "engine_url", "machine", "whisper_model"):
+    for field in ("filing", "video_inspiration", "cold_ideas", "engine_url", "machine", "whisper_model", "cobalt_url"):
         value = getattr(args, field)
         if value is not None:
             setattr(config, field, value)
@@ -105,6 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
     config.add_argument("--engine-url", dest="engine_url")
     config.add_argument("--machine")
     config.add_argument("--whisper-model", dest="whisper_model")
+    config.add_argument("--cobalt-url", dest="cobalt_url", help="a cobalt instance, e.g. http://localhost:9000")
     config.add_argument("--cookies", help="platform=FirefoxProfile, or platform= to clear")
     config.add_argument("--apify-cap", dest="apify_cap", type=float, help="standing monthly cap in USD; 0 turns Apify off")
     config.set_defaults(func=_config)

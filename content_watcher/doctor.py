@@ -72,6 +72,25 @@ def checks(config: Config) -> list[dict]:
         bgutil = None
     add("bgutil PO token", bool(bgutil), bgutil or "missing: pip install bgutil-ytdlp-pot-provider (and its local server)",
         "YouTube from the home connection")
+    instaloader = _module_version("instaloader")
+    add("instaloader", bool(instaloader), instaloader or "missing: pip install instaloader==4.15.4", "an Instagram fallback")
+    transcripts = _module_version("youtube_transcript_api")
+    add("youtube-transcript-api", bool(transcripts), transcripts or "missing: pip install youtube-transcript-api==1.2.4",
+        "YouTube words when the video will not download")
+    poppler = tools.which("pdftoppm")
+    add("poppler", bool(poppler), poppler or "missing: install Poppler (winget install oschwartz10612.Poppler)",
+        "LinkedIn document posts (PDF pages)")
+    if config.cobalt_url:
+        import urllib.request
+        try:
+            with urllib.request.urlopen(config.cobalt_url, timeout=5) as response:
+                cobalt_ok = response.status < 500
+        except Exception:  # noqa: BLE001
+            cobalt_ok = False
+        add("cobalt", cobalt_ok, config.cobalt_url + ("" if cobalt_ok else " (not answering: is Docker running?)"),
+            "a free downloader for every platform")
+    else:
+        add("cobalt", False, "not set up (optional): scripts/cobalt/README.md", "a free downloader for every platform")
     deno = tools.tool_version("deno")
     add("deno", bool(deno), deno or "missing: install deno (winget install DenoLand.Deno)", "YouTube's player challenge")
     add("engine key", bool(secrets.engine_token()), "present" if secrets.engine_token() else

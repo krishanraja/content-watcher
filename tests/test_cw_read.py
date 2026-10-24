@@ -183,6 +183,25 @@ class CarouselTests(unittest.TestCase):
             self.assertIn("one_number", readings[2].read["slide"]["layout"])
 
 
+@unittest.skipUnless(FFMPEG and shutil.which("pdftoppm"), "FFmpeg and poppler are required")
+class DocumentTests(unittest.TestCase):
+    def test_a_pdf_is_read_page_by_page(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pages = [make_image(root / f"p{i}.png", text, size="1200x1500") for i, text in enumerate(("FIRST PAGE", "SECOND PAGE"), 1)]
+            pdf = root / "linkedin_7250000000000000000.pdf"
+            try:
+                from PIL import Image  # type: ignore
+            except ImportError:
+                self.skipTest("Pillow makes the test PDF")
+            Image.open(pages[0]).convert("RGB").save(pdf, save_all=True, append_images=[Image.open(pages[1]).convert("RGB")])
+            reading = read_path(pdf, out=root / "r")[0]
+        self.assertEqual(reading.shape, "document")
+        self.assertEqual(reading.read["document"]["page_count"], 2)
+        if HAS_TESSERACT:
+            self.assertLess(reading.read_md.find("FIRST PAGE"), reading.read_md.find("SECOND PAGE"))
+
+
 class TextPostTests(unittest.TestCase):
     def test_filed_linkedin_markdown_reads_back_its_author_and_text(self):
         with tempfile.TemporaryDirectory() as tmp:

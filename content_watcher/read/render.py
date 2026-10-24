@@ -150,6 +150,18 @@ def _text(data: dict) -> list[str]:
     ]
 
 
+def _document(data: dict) -> list[str]:
+    doc = data["document"]
+    out = ["", f"Document: {doc['page_count'] or 'unknown number of'} pages, {doc['word_count']} words of text."]
+    for page in doc["pages"]:
+        out.append(f"### Page {page['index']} ({', '.join(page['layout'])})")
+        if page.get("text"):
+            out.append(page["text"])
+    if doc["text"] and not any(page.get("text") for page in doc["pages"]):
+        out += ["", "Text:", doc["text"]]
+    return out
+
+
 def render_md(data: dict) -> str:
     lines = _header(data)
     lines += _post_slides(data)
@@ -159,6 +171,8 @@ def render_md(data: dict) -> str:
         lines += _slide(data)
     if "text" in data:
         lines += _text(data)
+    if "document" in data:
+        lines += _document(data)
     lines += _words(data)
     if data.get("frames"):
         lines += ["", "## Frames kept beside this reading"]
