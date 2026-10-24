@@ -39,7 +39,7 @@ Lifecycle: live. The detail is in `README.md`.
 ## What is next and what is waiting on Krish
 
 - **D1 answered** (2026-10-24, "Yes to Drive filing"): fetched media files into his two Drive folders. D2 answered ("Apify with $5 cap"). **Waiting on Krish: D3** (the North Star for the renamed repository).
-- **Engine routes built: content-engine PR #161** (`claude/content-watch-routes`, verify green, 14 route tests). Auto-merge is not available on that repository (no branch protection), so merging is Krish's call. Nothing reaches the queue until it merges and deploys.
+- **Engine routes merged** (content-engine #161, 2026-10-24, Krish: "Merge it all."). No live call has reached them yet; the first comes from a home computer once the watcher is installed.
 - Checkpoint still open (brief section 10 step 2): read one real saved video from his Inspiration folder and compare its `read.md` token count with the taste ledger's eight 512px frames. Needs the home computer or his go-ahead to read one Drive file.
 - Live fetch once per platform on the home computer, with his yes. Then install the scheduled task on both home computers: `powershell -ExecutionPolicy Bypass -File scripts\install-content-watch.ps1 -CheckOnly`, then without `-CheckOnly`; readback is `content-watch doctor` and `Get-ScheduledTask "Mindmake Content Watcher"`.
 - YouTube and LinkedIn chains wait for the Inspiration session's verified research run.
