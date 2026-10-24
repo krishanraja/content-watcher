@@ -1,0 +1,27 @@
+[
+ {
+  "shortCode": "CxYzSide01",
+  "type": "Sidecar",
+  "ownerUsername": "carousel.example",
+  "timestamp": "2026-10-20T09:00:00.000Z",
+  "caption": "Five ways to open a talk",
+  "likesCount": 800,
+  "commentsCount": 20,
+  "displayUrl": "https://scontent.cdninstagram.example/cover.jpg",
+  "childPosts": [
+   {
+    "type": "Image",
+    "displayUrl": "https://scontent.cdninstagram.example/s1.jpg?stp=1"
+   },
+   {
+    "type": "Video",
+    "displayUrl": "https://scontent.cdninstagram.example/s2.jpg",
+    "videoUrl": "https://scontent.cdninstagram.example/s2.mp4?efg=1"
+   },
+   {
+    "type": "Image",
+    "displayUrl": "https://scontent.cdninstagram.example/s3.jpg"
+   }
+  ]
+ }
+]

@@ -1,0 +1,29 @@
+[
+ {
+  "id": "7430000000000000004",
+  "text": "carousel on tiktok",
+  "createTimeISO": "2026-10-22T08:00:00.000Z",
+  "authorMeta": {
+   "name": "tt.slides"
+  },
+  "diggCount": 5,
+  "commentCount": 1,
+  "playCount": 99,
+  "shareCount": 0,
+  "isSlideshow": true,
+  "slideshowImageLinks": [
+   {
+    "downloadLink": "https://api.apify.example/v2/key-value-stores/k/records/slide1.jpg"
+   },
+   {
+    "downloadLink": "https://api.apify.example/v2/key-value-stores/k/records/slide2.jpg"
+   }
+  ],
+  "musicMeta": {
+   "playUrl": "https://sf16.tiktok.example/m.mp3"
+  },
+  "videoMeta": {
+   "subtitleLinks": []
+  }
+ }
+]
