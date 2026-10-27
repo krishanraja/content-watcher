@@ -10,6 +10,24 @@ accounts waits for his yes: D2 (brief section 3), a standing cap he sets with it
 the run. No step was run against a post he saved; the live tests that were run are named where they appear.
 "Unverified" and "inference" mean exactly that throughout.
 
+> **Status, 2026-10-27.** This is the research record of 2026-10-24, kept as evidence. Its "Recommended chain" and
+> "Do not build" lists are recommendations from before Krish asked for every fallback; the chains the code runs are in
+> `docs/FALLBACKS.md` and `content_watcher/fetch/__init__.py` (`_methods`), and where they differ the code wins.
+> Differences a reader would act on:
+>
+> - D2 is answered ("Apify with $5 cap", `docs/DECISIONS.md`), so the "until D2 is answered" and "only once D2 says
+>   Apify" gates below are open. One $5 monthly cap covers every Apify step on every platform
+>   (`content_watcher/fetch/apify.py`, `allowed`). Steps that use his cookies are not run unless a Firefox profile is
+>   set per platform with `content-watch config --cookies`.
+> - Instagram starts with its own embed player (`instagram_embed.py`, tested live 2026-10-24), which this file lists as
+>   do not build, and the chains include Instaloader, cobalt, TikWM and Tikmate. Krish agreed to the free sites on
+>   2026-10-24, which lifts the "only once Krish has agreed" hold on TikWM.
+> - The code sends no `videoKvStoreIdOrName` on TikTok's Apify run, so no named store is left on his Apify account.
+>   Whether the actor then keeps the files in the run's own store (open question 6 below) has not been tested.
+> - Firecrawl, Gemini, ScrapeCreators and Supadata steps are not built.
+> - The YouTube and LinkedIn chains described here are built (#4) and covered by fixture tests; no fetch of either has
+>   run on a home computer yet.
+
 ## Across all five
 
 These facts hold for more than one section. Each is stated once here; the sections carry the detail.
@@ -1157,7 +1175,7 @@ add $0.001 each at BRONZE, paid, or nothing through TikTokApi.
    credits never expire). Its transcript and comments endpoints were added. It no longer needs a new account, since
    its actor runs on his Apify token.
 9. Terms: the EEA/UK terms (section 4.5) now lead, because content-engine keeps London as his clock
-   (`scripts/quick-edit/archive.py`), unverified as his legal residence. "Private study lowers the exposure" was
+   (content-engine `scripts/quick-edit/archive.py`), unverified as his legal residence. "Private study lowers the exposure" was
    corrected: under UK law it gives no cover for study with a commercial purpose (CDPA 1988 s.178). This replaces the
    brief's "TikTok's US Terms section 3.4".
 10. Direct page read: the re-test was added. The `comments` key is an empty list, so the page has no comments.

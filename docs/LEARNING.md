@@ -28,7 +28,7 @@ Repository owners with workflow-scoped GitHub access can copy `examples/github-w
 
 If GitHub access is unavailable, open:
 
-https://github.com/krishanraja/video-compression/issues/new?template=session-feedback.yml
+https://github.com/krishanraja/content-watcher/issues/new?template=session-feedback.yml
 
 Then copy and paste `session-review.md`. The report is ordinary Markdown and remains useful without any GitHub tooling.
 

@@ -26,7 +26,7 @@ Why: A pasted GitHub link can point the agent to public instructions but cannot 
 
 Rejected alternative: Rely on a short link plus a vague opening request. That makes the behavior client-dependent and is especially likely to lose the end-of-session learning loop.
 
-## 2026-10-24: Content Watcher decisions only Krish makes (asked, waiting)
+## 2026-10-24: Content Watcher decisions only Krish makes (D1 and D2 answered, D3 open)
 
 From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the work most first.
 
@@ -35,12 +35,16 @@ From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the wo
   **Ruling (Krish, 2026-10-24): "Yes to Drive filing".** `filing` now defaults to `drive`; the installer requires
   both synced folder paths and checks they exist. The watcher only adds files there: never deletes, never
   overwrites, and the same post twice is a no-op. The first real write into his Drive still waits for his yes on the
-  live end-to-end run.
+  live end-to-end run. (The two folders named in the guess above have since moved: see "The inspiration folders
+  moved to Ventures > Inspiration", below.)
 - **D2. How Instagram and LinkedIn are fetched** (his signed-in Firefox session, or Apify with a standing monthly cap).
   Asked 2026-10-24 with the best guess of Apify with a $5 cap. **Ruling (Krish, 2026-10-24): "Apify with $5 cap".**
   Apify runs only after the free methods fail, never with his accounts, and the local spend ledger stops it before a
   run that would pass $5 in a calendar month. No cookies are used.
-- **D3. The North Star for the renamed repository.** To ask after D2.
+- **D3. The North Star for the renamed repository.** Open on 2026-10-27: no answer is in the record. It was to be
+  asked after D2. `docs/NORTH_STAR.md` still holds the compression-only wording and number (set 2026-10-18, metric
+  added 2026-10-23, both before the rename), and only Krish changes it. The wording proposed to him is in
+  `docs/BRIEF.md` section 3.
 
 ## 2026-10-24: A separate route for hand-dropped readings
 

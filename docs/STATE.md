@@ -1,6 +1,8 @@
 # Project state
 
-Last verified: 2026-09-15
+Scope: the Video Compression Engine only (`video_compression/`, the `video-compress` command and its repository skill). The state of the whole repository, including Content Watcher, is in `NOW.md`.
+
+Last verified: 2026-10-27 for the code and tests (`video_compression/` has not changed since 2026-09-15); 2026-09-15 for the remote readback and the ChatGPT Work discovery below, which could not be re-read on 2026-10-27.
 
 STATE_ROUTE: `docs/STATE.md`
 
@@ -18,9 +20,9 @@ FIRST_SURFACE: Repository-triggered ChatGPT Work conversation, with a complete v
 
 CURRENT PHASE: Published and remotely verified.
 
-VERIFICATION: Eight tests pass, including a real FFmpeg compression, review-pack, segment, and full-decode flow plus the full opening-prompt access and safety contract. Repository skill validation and Python package build pass. A local feedback capture and review-draft canary passes.
+VERIFICATION: Eight tests (of the 80 in the repository) pass, including a real FFmpeg compression, review-pack, segment, and full-decode flow plus the full opening-prompt access and safety contract. Repository skill validation and Python package build passed on 2026-09-15 and were not re-run on 2026-10-27. A local feedback capture and review-draft canary passes.
 
-REMOTE READBACK: Public repository `krishanraja/video-compression`, default branch `main`, implementation commit `e5ae0d54acb61898225290e2906f03a005055ced`, with `session-feedback` and `needs-triage` labels present.
+REMOTE READBACK: Public repository `krishanraja/video-compression` (renamed `krishanraja/content-watcher` on 2026-10-24; visibility not re-read), default branch `main`, implementation commit `e5ae0d54acb61898225290e2906f03a005055ced`, with `session-feedback` and `needs-triage` labels present.
 
 NOT VERIFIED: Fresh ChatGPT Work discovery on a separate user's local project. Static discovery paths, the repository skill, and local behavior are verified. The read-only fresh-client canary was not authorized by the host because it would transmit repository content to an external model service.
 

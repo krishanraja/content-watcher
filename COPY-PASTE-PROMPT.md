@@ -2,6 +2,8 @@
 
 Copy the entire prompt below into a new ChatGPT Work task. It covers local setup, the compression conversation, optional content-aware clips, output verification, and the privacy-gated session learning loop.
 
+This prompt is for the Video Compression Engine only. The repository is now `krishanraja/content-watcher` (renamed from `video-compression` on 2026-10-24) and also holds Content Watcher, which this prompt does not use. The prompt below still names the old address, `krishanraja/video-compression`, because `tests/test_prompt_contract.py` requires that text and `video_compression/feedback.py` still defaults to it; GitHub should forward it to the new name (not re-checked). If a task cannot open the old address, use `https://github.com/krishanraja/content-watcher`.
+
 ```text
 Use https://github.com/krishanraja/video-compression as the operating repository for this task.
 

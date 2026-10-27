@@ -1,12 +1,15 @@
 # Content Watcher
 
 Anything Krish points at, a link to a post or a file he drops, becomes a full text reading on his own machine, with no
-model watching it. The same repository still holds the video compression engine below; his own recordings need both.
+model watching it. This repository, `krishanraja/content-watcher` (renamed from `video-compression` on 2026-10-24),
+holds two things: Content Watcher (package `content_watcher`, command `content-watch`) and the Video Compression
+Engine below (package `video_compression`, command `video-compress`). His own recordings need both. Where each stands
+right now: [`NOW.md`](NOW.md).
 
 ## Content Watcher in one minute
 
 ```sh
-pip install -e ".[watch]"          # faster-whisper, OpenCV, yt-dlp, gallery-dl
+pip install -e ".[watch]"          # faster-whisper, OpenCV, yt-dlp, gallery-dl, Instaloader and the YouTube helpers (see pyproject.toml)
 content-watch doctor                # what this machine can and cannot do, naming each missing piece
 content-watch read path/to/video.mp4 --out readings      # read.json + read.md, measured locally
 content-watch fetch "https://www.tiktok.com/@a/video/1" --out fetched
@@ -16,8 +19,11 @@ content-watch watch --once          # claim pasted links, fetch, file, read, rep
 - What a reading holds: [`docs/READ_FORMAT.md`](docs/READ_FORMAT.md).
 - How the home computers reach the system: [`docs/WATCH_API.md`](docs/WATCH_API.md).
 - The build brief and the decisions only Krish makes: [`docs/BRIEF.md`](docs/BRIEF.md), [`docs/DECISIONS.md`](docs/DECISIONS.md).
+- Every way the watcher tries to get a post, per platform: [`docs/FALLBACKS.md`](docs/FALLBACKS.md); the research behind it: [`docs/FETCH_METHODS.md`](docs/FETCH_METHODS.md).
 - Install on a Windows home computer (checks first, installs nothing if a piece is missing):
-  `powershell -ExecutionPolicy Bypass -File scripts\install-content-watch.ps1 -CheckOnly`, then without `-CheckOnly`.
+  `powershell -ExecutionPolicy Bypass -File scripts\install-content-watch.ps1 -ProductionInspo "<synced path>" -ContentInspo "<synced path>" -CheckOnly`,
+  then without `-CheckOnly`. The two paths are the synced Drive folders Ventures > Inspiration > Production Inspo and
+  Content Inspo; the installer needs both and reuses them from an earlier install.
 
 Fetched media is filed into Drive > Ventures > Inspiration: Production Inspo or Content Inspo.
 
@@ -74,7 +80,7 @@ Every ChatGPT Work session can also produce a sanitized local review of problems
 Install the reusable command with pipx:
 
 ```sh
-pipx install git+https://github.com/krishanraja/video-compression.git
+pipx install git+https://github.com/krishanraja/content-watcher.git
 video-compress
 ```
 

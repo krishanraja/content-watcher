@@ -1,8 +1,10 @@
 # The watch API (content-engine routes this machine calls)
 
 Status: Current as designed on 2026-10-24; the routes are built in krishanraja/content-engine `apps/control-plane`
-(see `NOW.md` for whether they are merged). The home computers hold only the engine key and reach the system
-through these three routes. Every call is `POST`, JSON, with `Authorization: Bearer <engine key>`.
+and recorded as merged there (content-engine #161, 2026-10-24, per `NOW.md`; not re-read from this repository). No
+live call from a home computer has reached them yet. The client side is `content_watcher/engine.py`. The home
+computers hold only the engine key and reach the system through these three routes. Every call is `POST`, JSON, with
+`Authorization: Bearer <engine key>`.
 
 ## `POST /api/watch/claim`
 

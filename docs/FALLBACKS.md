@@ -1,6 +1,6 @@
 # Every way the watcher tries to get a post
 
-Status: Current, 2026-10-24. Krish, 2026-10-24: "Build all the fallbacks. This needs to be bulletproof. There's got
+Status: Current, 2026-10-24 (the chain table re-checked against `_methods` on 2026-10-27). Krish, 2026-10-24: "Build all the fallbacks. This needs to be bulletproof. There's got
 to be a tonne of ways to do this reliably. There are so many free sites out there that I just copy a link in, press
 download, and it lets me select the quality and whatnot. I never really need to download a high-quality video when I'm
 doing this job."
