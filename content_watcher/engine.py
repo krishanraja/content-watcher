@@ -4,10 +4,45 @@ from __future__ import annotations
 
 import json
 import socket
+import ssl
 import urllib.error
 import urllib.request
 
 from . import secrets
+
+
+def _opener():
+    """An opener that checks the engine's certificate against the operating system's own store (truststore) when
+    it is installed, so a Windows machine trusts what its browser and PowerShell trust; else Python's default."""
+    try:
+        import truststore
+
+        context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except Exception:  # noqa: BLE001 - not installed yet, or an old Python: the default opener still works
+        return urllib.request.build_opener()
+    return urllib.request.build_opener(urllib.request.HTTPSHandler(context=context))
+
+
+def unreachable_class(reason: object) -> str:
+    """Why the engine could not be reached, as a class the log and the engine's health report can carry. Krish,
+    2026-10-28, after pasting this machine's log: "engine_unreachable" alone told nobody what to fix."""
+    if isinstance(reason, ssl.SSLCertVerificationError):
+        return "engine_tls_untrusted"
+    if isinstance(reason, ssl.SSLError):
+        return "engine_tls_error"
+    if isinstance(reason, socket.gaierror):
+        return "engine_dns_failed"
+    if isinstance(reason, (socket.timeout, TimeoutError)) or getattr(reason, "winerror", None) == 10060:
+        return "engine_timeout"
+    if isinstance(reason, PermissionError) or getattr(reason, "winerror", None) == 10013:
+        return "engine_blocked"
+    if isinstance(reason, ConnectionRefusedError):
+        return "engine_connection_refused"
+    if isinstance(reason, (ConnectionResetError, ConnectionAbortedError)):
+        return "engine_connection_reset"
+    if isinstance(reason, str) and "proxy" in reason.lower():
+        return "engine_proxy"
+    return "engine_unreachable"
 
 
 class EngineError(RuntimeError):
@@ -21,7 +56,7 @@ class Engine:
         self.base_url = base_url.rstrip("/")
         self.token = token if token is not None else secrets.engine_token()
         self.timeout = timeout
-        self.opener = opener or urllib.request.build_opener()
+        self.opener = opener or _opener()
 
     def _post(self, path: str, body: dict) -> dict:
         if not self.token:
@@ -41,8 +76,10 @@ class Engine:
                                413: "engine_body_too_big"}.get(exc.code, f"engine_http_{exc.code}")) from None
         except (socket.timeout, TimeoutError):
             raise EngineError("engine_timeout") from None
-        except urllib.error.URLError:
-            raise EngineError("engine_unreachable") from None
+        except urllib.error.URLError as exc:
+            raise EngineError(unreachable_class(exc.reason)) from None
+        except (ssl.SSLError, ConnectionError) as exc:
+            raise EngineError(unreachable_class(exc)) from None
         return json.loads(raw) if raw.strip() else {}
 
     def claim(self, machine: str, limit: int) -> list[dict]:

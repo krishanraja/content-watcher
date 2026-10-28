@@ -47,8 +47,9 @@ class State:
 
 
 @contextmanager
-def run_lock(stale_after: float = 7200):
-    """One watch run at a time on this machine; a lock older than two hours is taken over."""
+def run_lock(stale_after: float = 1800):
+    """One watch run at a time on this machine; a lock older than half an hour is taken over (a run never lives
+    longer: watch.RUN_DEADLINE_S ends it)."""
     target = state_dir() / "watch.lock"
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists() and time.time() - target.stat().st_mtime > stale_after:
