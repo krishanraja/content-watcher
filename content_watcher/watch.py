@@ -170,26 +170,22 @@ def drop_candidates(config: Config, state: State, limit: int = DROP_LIMIT) -> li
     return found
 
 
-def _current(rev: str) -> bool:
-    return rev >= ENGINE_REV  # the same "cw-YYYY.MM.DD" shape on both sides
-
-
 def unheld_drops(config: Config, engine: Engine, state: State, counts: Counter,
                  limit: int = DROP_LIMIT) -> list[tuple[Path, str, str]]:
     """The unread files the engine holds no current reading of, newest first, up to the limit. Each file it already
-    holds is marked read here and never read again. An engine that cannot say (an older one, a failure) leaves the
+    holds (the same or a newer revision, or a reading made from a link) is marked read here and never read again. An engine that cannot say (an older one, a failure) leaves the
     files to be read as before; its writes keep a reading made from a link in any case."""
     found = drop_candidates(config, state, DROP_SCAN)
     if not found:
         return []
     try:
-        held = engine.held(config.machine, [sha for _path, sha, _folder in found])
+        held = engine.held(config.machine, [sha for _path, sha, _folder in found], ENGINE_REV)
     except EngineError:
         counts["drop.held_unknown"] += 1
         return found[:limit]
     left = []
     for path, sha, folder in found:
-        if _current(held.get(sha, "")):
+        if sha in held:
             state.mark_sent(sha, ENGINE_REV)
             counts["drop.held"] += 1
         else:

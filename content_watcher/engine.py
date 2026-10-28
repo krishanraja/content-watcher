@@ -93,9 +93,10 @@ class Engine:
     def read(self, machine: str, reads: list[dict]) -> dict:
         return self._post("/api/watch/read", {"machine": machine, "reads": reads})
 
-    def held(self, machine: str, shas: list[str]) -> dict[str, str]:
-        """Which of these media the engine already holds a reading of, with that reading's engine_rev."""
-        held = self._post("/api/watch/read", {"machine": machine, "check": shas}).get("held")
+    def held(self, machine: str, shas: list[str], engine_rev: str) -> dict[str, str]:
+        """The media this machine need not read: the engine holds a reading of the same or a newer revision, or one
+        made from a link (content-engine heldReads, which compares revisions by number). Each with its revision."""
+        held = self._post("/api/watch/read", {"machine": machine, "check": shas, "engine_rev": engine_rev}).get("held")
         return {str(sha): str(rev) for sha, rev in held.items()} if isinstance(held, dict) else {}
 
     def apify(self, request_id: str, machine: str, actor: str, payload: dict) -> list[dict]:

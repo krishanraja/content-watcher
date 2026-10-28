@@ -44,7 +44,9 @@ class StubEngine:
                     answer = {"requests": stub.queue[: body["limit"]]}
                     stub.queue = stub.queue[body["limit"]:]
                 if self.path == "/api/watch/read" and "check" in body:
-                    answer = {"held": {sha: stub.held[sha] for sha in body["check"] if sha in stub.held}}
+                    # The engine's rule (heldReads): the same or a newer revision; a test's revisions share one shape.
+                    answer = {"held": {sha: stub.held[sha] for sha in body["check"]
+                                       if sha in stub.held and stub.held[sha] >= body["engine_rev"]}}
                 payload = json.dumps(answer).encode()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -261,7 +263,7 @@ class WatchOnceTests(unittest.TestCase):
         make_image(self.cold / "slide.png", "COLD IDEA")
 
         class Silent(Engine):
-            def held(self, machine, shas):
+            def held(self, machine, shas, engine_rev):
                 raise EngineError("engine_http_400")  # an engine from before the check
 
         stub = StubEngine([])

@@ -58,8 +58,9 @@ Body: `{ "machine", "reads": [row, ...] }`: readings of files Krish dropped by h
 above. Decision (2026-10-24): a separate route rather than folding into `report`, because a drop has no request id
 and the report route's job is moving one request through its states.
 
-The same route with `{ "machine", "check": [sha256, ...] }` (at most 50) writes nothing and answers
-`{ "held": { sha256: engine_rev } }` for the media the engine already holds a reading of. The drop reader asks it
+The same route with `{ "machine", "check": [sha256, ...], "engine_rev" }` (at most 50) writes nothing and answers
+`{ "held": { sha256: engine_rev } }` for the media it holds a reading of at the same or a newer revision, or one
+made from a link. The drop reader asks it
 before reading: the folders also hold what the other machine and the cloud filed from links, which they read already
 (`watch.unheld_drops`; 28 October 2026). An engine that cannot answer leaves the files to be read as before.
 
