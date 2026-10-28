@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import threading
 import time
 from collections import Counter
 from datetime import datetime, timezone
@@ -19,6 +21,35 @@ from .read.reader import read_path, read_post
 from .state import State, run_lock
 
 DROP_LIMIT = 3  # hand-dropped files read per run, so a run stays short
+# The longest a run may live. From 25 and 26 October 2026 both home computers stopped logging at 08:00 and a press of
+# Run did nothing: a run that never ends holds the scheduled task, which ignores new starts while one is running. A
+# run past this logs where it was (stage.<name>), frees the lock and ends, so the next minute's run starts clean.
+RUN_DEADLINE_S = 20 * 60
+_STAGE = ["start"]
+
+
+def heartbeat(stage: str) -> None:
+    """Where this run is, for the health report the recordings pass sends the engine (content-engine
+    scripts/recordings-upload.ps1). A stage name and a time only, never a link or a file name."""
+    _STAGE[0] = stage
+    try:
+        target = state_dir() / "watch.heartbeat"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        target.write_text(json.dumps({"at": stamp, "stage": stage, "pid": os.getpid()}), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _over_time(counts: Counter, exit_process=os._exit) -> None:
+    """The deadline: log the stage the run was stuck in, free the lock, end the process."""
+    counts["killed.over_time"] += 1
+    counts[f"stage.{_STAGE[0]}"] += 1
+    try:
+        log_line(counts)
+        (state_dir() / "watch.lock").unlink(missing_ok=True)
+    finally:
+        exit_process(3)
 
 
 def log_line(counts: Counter) -> Path:
@@ -33,6 +64,7 @@ def log_line(counts: Counter) -> Path:
 
 def handle_request(request: dict, config: Config, engine: Engine, state: State, counts: Counter) -> None:
     request_id = str(request["id"])
+    heartbeat("fetch")
     work = state_dir() / "fetch" / request_id
     work.mkdir(parents=True, exist_ok=True)
     result = fetch(request["url"], work, config)
@@ -45,6 +77,7 @@ def handle_request(request: dict, config: Config, engine: Engine, state: State, 
         return
     post: Post = result.post
     shape = post.infer_shape()
+    heartbeat("file")
     try:
         media = file_post(post, config, request.get("lane"))
     except FilingError as failure:
@@ -53,6 +86,7 @@ def handle_request(request: dict, config: Config, engine: Engine, state: State, 
         return
     engine.report(request_id, config.machine, "filed", shape=shape, media=media)
     counts["filed"] += 1
+    heartbeat("read")
     readings = read_post(post.media[0].parent, out=state_dir() / "readings" / request_id,
                          whisper_model=config.whisper_model)
     rows = [reading.contract_row() for reading in readings]
@@ -86,6 +120,7 @@ def drop_candidates(config: Config, state: State, limit: int = DROP_LIMIT) -> li
 
 def read_drops(config: Config, engine: Engine, state: State, counts: Counter, limit: int = DROP_LIMIT) -> None:
     for path, sha, _folder in drop_candidates(config, state, limit):
+        heartbeat("read_drop")
         try:
             readings = read_path(path, out=state_dir() / "readings" / "drops", whisper_model=config.whisper_model)
         except Exception:  # noqa: BLE001 - one bad file must not stop the run
@@ -98,18 +133,35 @@ def read_drops(config: Config, engine: Engine, state: State, counts: Counter, li
         counts["drop.read"] += 1
 
 
-def watch_once(config: Config | None = None, engine: Engine | None = None) -> Counter:
-    config = config or Config.load()
+def watch_once(config: Config | None = None, engine: Engine | None = None, deadline_s: float = RUN_DEADLINE_S) -> Counter:
     counts: Counter = Counter()
     started = time.monotonic()
+    heartbeat("start")
+    timer = threading.Timer(deadline_s, _over_time, args=(counts,))
+    timer.daemon = True
+    timer.start()
+    try:
+        _watch_once(config, engine, counts)
+    except Exception as exc:  # noqa: BLE001 - a run that cannot start still logs, by class
+        counts[f"run.error.{type(exc).__name__}"] += 1
+    finally:
+        timer.cancel()
+    heartbeat("done")
+    counts["seconds"] = int(time.monotonic() - started)
+    log_line(counts)
+    return counts
+
+
+def _watch_once(config: Config | None, engine: Engine | None, counts: Counter) -> None:
+    config = config or Config.load()
     with run_lock() as got:
         if not got:
             counts["skipped.already_running"] += 1
-            log_line(counts)
-            return counts
+            return
         engine = engine or Engine(config.engine_url)
         state = State()
         try:
+            heartbeat("claim")
             try:
                 requests = engine.claim(config.machine, config.claim_limit)
             except EngineError as failure:
@@ -127,13 +179,12 @@ def watch_once(config: Config | None = None, engine: Engine | None = None) -> Co
                         engine.report(str(request["id"]), config.machine, "failed", status_class="other")
                     except EngineError:
                         pass
-            if "engine.no_engine_key" not in counts:
+            # Dropped files only when the engine answered: their readings have nowhere to go otherwise.
+            if not any(key.startswith("engine.") for key in counts):
+                heartbeat("drops")
                 try:
                     read_drops(config, engine, state, counts)
                 except EngineError as failure:
                     counts[f"engine.{failure.status_class}"] += 1
         finally:
             state.close()
-    counts["seconds"] = int(time.monotonic() - started)
-    log_line(counts)
-    return counts

@@ -1,6 +1,7 @@
 """Filing, the engine client and one watch run end to end, against a stub engine on localhost."""
 
 import json
+from collections import Counter
 import os
 import shutil
 import tempfile
@@ -236,3 +237,61 @@ class WatchOnceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SelfReportTest(unittest.TestCase):
+    """Krish, 2026-10-28: "i should never really need to copy and paste log files to you like this, ever". A run
+    names why the engine could not be reached, says where it was if it ran too long, and never hangs."""
+
+    def setUp(self):
+        self.home = tempfile.mkdtemp()
+        self.env = mock.patch.dict(os.environ, {"CONTENT_WATCH_HOME": self.home})
+        self.env.start()
+
+    def tearDown(self):
+        self.env.stop()
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_unreachable_is_named_by_its_cause(self):
+        import socket
+        import ssl
+        from content_watcher.engine import unreachable_class
+
+        self.assertEqual(unreachable_class(ssl.SSLCertVerificationError("x")), "engine_tls_untrusted")
+        self.assertEqual(unreachable_class(ssl.SSLError("x")), "engine_tls_error")
+        self.assertEqual(unreachable_class(socket.gaierror("x")), "engine_dns_failed")
+        self.assertEqual(unreachable_class(ConnectionRefusedError()), "engine_connection_refused")
+        self.assertEqual(unreachable_class(PermissionError()), "engine_blocked")
+        self.assertEqual(unreachable_class(TimeoutError()), "engine_timeout")
+        self.assertEqual(unreachable_class("Tunnel connection failed: 407 Proxy Authentication Required"), "engine_proxy")
+        self.assertEqual(unreachable_class(OSError("anything else")), "engine_unreachable")
+
+    def test_a_refused_connection_reaches_the_log_by_class(self):
+        engine = Engine("http://127.0.0.1:1", token="test-key", timeout=5)
+        config = Config(machine="test-machine")
+        counts = watch.watch_once(config, engine)
+        self.assertEqual(counts["engine.engine_connection_refused"], 1)
+        self.assertNotIn("drop.read", counts, "no dropped file is read while the engine cannot be reached")
+        line = (Path(self.home) / "watch.log").read_text(encoding="utf-8").strip().splitlines()[-1]
+        self.assertIn('"engine.engine_connection_refused":1', line)
+        beat = json.loads((Path(self.home) / "watch.heartbeat").read_text(encoding="utf-8"))
+        self.assertEqual(beat["stage"], "done")
+
+    def test_a_run_that_cannot_start_still_logs_its_class(self):
+        with mock.patch.object(watch.Config, "load", side_effect=ValueError("bad config")):
+            counts = watch.watch_once()
+        self.assertEqual(counts["run.error.ValueError"], 1)
+        self.assertIn('"run.error.ValueError":1', (Path(self.home) / "watch.log").read_text(encoding="utf-8"))
+
+    def test_a_run_past_its_deadline_logs_its_stage_frees_the_lock_and_ends(self):
+        lock = Path(self.home) / "watch.lock"
+        lock.write_text("123")
+        watch.heartbeat("read_drop")
+        ended = []
+        counts = Counter()
+        watch._over_time(counts, exit_process=ended.append)
+        self.assertEqual(ended, [3])
+        self.assertFalse(lock.exists())
+        line = (Path(self.home) / "watch.log").read_text(encoding="utf-8").strip()
+        self.assertIn('"killed.over_time":1', line)
+        self.assertIn('"stage.read_drop":1', line)
