@@ -11,6 +11,7 @@ from typing import Callable
 from .. import urls
 from ..config import Config
 from ..post import Post
+from .. import session
 from . import apify, free_sites, gallerydl, instagram_embed, instaloader_fetch, linkedin_page, tiktok_page, youtube_extra, ytdlp
 from .base import STATUS_CLASSES, FetchFailed
 
@@ -34,6 +35,8 @@ def _methods(link: urls.PostLink, config: Config) -> list[tuple[str, Callable[[P
     on 2026-10-24 ("Build all the fallbacks. This needs to be bulletproof.")."""
     url, platform, post_id = link.url, link.platform, link.post_id
     cookies = config.cookies.get(platform)
+    if not cookies and platform in config.browser_sessions:
+        cookies = session.signed_in_profile(platform)
     chain: list[tuple[str, Callable[[Path], Post]]] = []
 
     def cobalt_step() -> None:
@@ -49,12 +52,14 @@ def _methods(link: urls.PostLink, config: Config) -> list[tuple[str, Callable[[P
             chain.append(("ytdlp_carousel", lambda f: ytdlp.fetch_carousel(url, platform, f)))
         chain.append(("instaloader", lambda f: instaloader_fetch.fetch(url, post_id, f)))
         cobalt_step()
+        # His own signed-in session, free, before anything paid: it sees what only a signed-in account sees, such as
+        # an age-restricted post (Krish, 2026-10-28: "You need to get the local runner for working as well as Apify").
+        if cookies:
+            chain.append(("gallerydl_cookies", lambda f: gallerydl.fetch(url, platform, f, cookies_profile=cookies)))
         actor = "instagram_reel" if link.kind == "reel" else "instagram_post"
         chain.append((f"apify_{actor}", lambda f: apify.fetch(url, platform, f, config, actor_key=actor, expected_id=post_id)))
         # Age-restricted posts: every logged-out scraper is refused, this downloader is not (28 October 2026).
         chain.append(("apify_instagram_downloader", lambda f: apify.fetch_instagram_downloader(url, post_id, f, config)))
-        if cookies:
-            chain.append(("gallerydl_cookies", lambda f: gallerydl.fetch(url, platform, f, cookies_profile=cookies)))
         chain.append(("instagram_cover_only", lambda f: instagram_embed.cover_only(url, post_id, f)))
     elif platform == "tiktok":
         if link.kind != "photo":

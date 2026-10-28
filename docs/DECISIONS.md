@@ -41,6 +41,13 @@ From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the wo
   Asked 2026-10-24 with the best guess of Apify with a $5 cap. **Ruling (Krish, 2026-10-24): "Apify with $5 cap".**
   Apify runs only after the free methods fail, never with his accounts, and the local spend ledger stops it before a
   run that would pass $5 in a calendar month. No cookies are used.
+  **Ruling (Krish, 2026-10-28): "Yes to both on the two decisions"**, the second being "Should a home computer use
+  your logged-in Instagram session (from Firefox) for posts like this one?" (his age-restricted carousel, which every
+  logged-out route was refused), with "You need to get the local runner for working as well as Apify". So on the home
+  computers, for Instagram only, the watcher looks for a Firefox profile holding his live sign-in (`session.py`: the
+  cookie's host, name and expiry only, never its value) and gives that profile to gallery-dl, free, before any paid
+  step. It only fetches the links he pasted; nothing signs in, posts, likes or follows. Each machine says once an hour
+  whether it holds the session (`session.instagram.firefox` or `.none` in its counts). Apify stays the paid fallback.
 - **D3. The North Star for the renamed repository.** Open on 2026-10-27: no answer is in the record. It was to be
   asked after D2. `docs/NORTH_STAR.md` still holds the compression-only wording and number (set 2026-10-18, metric
   added 2026-10-23, both before the rename), and only Krish changes it. The wording proposed to him is in
