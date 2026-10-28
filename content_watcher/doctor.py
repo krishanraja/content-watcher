@@ -7,7 +7,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import ENGINE_REV, secrets, tools
+from . import ENGINE_REV, secrets, session, tools
 from .config import Config, state_dir
 from .fetch import apify
 from .urls import BROWSER_UA
@@ -111,8 +111,12 @@ def checks(config: Config) -> list[dict]:
         add("apify", False, "off: no standing monthly cap set (decision D2)", "paid fallback")
     for platform in ("instagram", "linkedin", "tiktok", "youtube"):
         profile = config.cookies.get(platform)
-        add(f"cookies {platform}", bool(profile), f"Firefox profile '{profile}'" if profile else "none (logged out only)",
-            f"{platform} posts behind a login")
+        found = None if profile or platform not in config.browser_sessions else session.signed_in_profile(platform)
+        detail = (f"Firefox profile '{profile}'" if profile else
+                  f"his signed-in Firefox session ({Path(found).name})" if found else
+                  "no signed-in Firefox session on this machine (logged out only)" if platform in config.browser_sessions
+                  else "none (logged out only)")
+        add(f"cookies {platform}", bool(profile or found), detail, f"{platform} posts behind a login")
     add("filing", True, config.filing + (" (on this machine only)" if config.filing == "local" else " (the two Drive folders)"),
         "where fetched media goes")
     for label, flag, value in (("Production Inspo", "--production-inspo", config.video_inspiration),

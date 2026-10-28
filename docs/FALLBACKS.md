@@ -13,8 +13,8 @@ each step is `docs/FETCH_METHODS.md`.
 
 | Platform | Chain |
 |---|---|
-| Instagram reel | Instagram's embed player, yt-dlp, Instaloader, cobalt (if set up), Apify reel scraper, Apify downloader (`snapinsta~instagram-downloader-api`, for age-restricted posts), then the cover picture and caption as a last resort |
-| Instagram post or carousel | Instagram's embed player, yt-dlp carousel mode, Instaloader, cobalt, Apify post scraper, Apify downloader (age-restricted posts), then the cover picture and caption |
+| Instagram reel | Instagram's embed player, yt-dlp, Instaloader, cobalt (if set up), his signed-in Firefox session through gallery-dl (on a home computer that has one; 2026-10-28), Apify reel scraper, Apify downloader (`snapinsta~instagram-downloader-api`, for age-restricted posts), then the cover picture and caption as a last resort |
+| Instagram post or carousel | Instagram's embed player, yt-dlp carousel mode, Instaloader, cobalt, his signed-in Firefox session through gallery-dl, Apify post scraper, Apify downloader (age-restricted posts), then the cover picture and caption |
 | TikTok video | yt-dlp (a file with no sound moves on), gallery-dl, the post page, TikWM, Tikmate, cobalt, Apify |
 | TikTok photo post | gallery-dl, the post page, TikWM, cobalt, Apify |
 | YouTube | oEmbed check (a removed or private video stops here), yt-dlp with Deno and the bgutil token helper, yt-dlp as the mobile client, cobalt, for a Short the Apify downloader (about $0.02), then words only: youtube-transcript-api, Apify transcripts |

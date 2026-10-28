@@ -32,6 +32,9 @@ class Config:
     cold_ideas: str | None = None  # synced path of Content Inspo (Drive 1FNztJOU82M8zb6IIbUAbvuI6Kr0pF5Hu)
     # How Instagram and LinkedIn are fetched (D2): Firefox profile names allowed for cookies, per platform.
     cookies: dict[str, str] = field(default_factory=dict)
+    # Platforms where his own signed-in Firefox session, found on this machine, may fetch what only a signed-in account
+    # sees (session.py). Ruling (Krish, 2026-10-28): "Yes to both on the two decisions" (Instagram).
+    browser_sessions: list[str] = field(default_factory=lambda: ["instagram"])
     # Paid fallback (D2, Krish 2026-10-24: "Apify with $5 cap"): only after the free methods fail, never above the cap.
     apify_enabled: bool = True
     apify_monthly_cap_usd: float = 5.0

@@ -11,7 +11,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import ENGINE_REV
+from . import ENGINE_REV, session
 from .config import Config, state_dir
 from .engine import Engine, EngineError, put_upload
 from .fetch import apify as paid
@@ -200,6 +200,30 @@ def watch_once(config: Config | None = None, engine: Engine | None = None, deadl
     return counts
 
 
+SESSION_NOTE_EVERY_S = 60 * 60
+
+
+def note_sessions(config: Config, counts: Counter, now: float | None = None) -> None:
+    """Once an hour, whether this machine holds his signed-in Firefox session for each platform it may use, as a
+    count (session.instagram.firefox or session.instagram.none) that the recordings pass carries to the engine. A
+    class only: never a profile name or a cookie."""
+    now = time.time() if now is None else now
+    stamp = state_dir() / "session-note.json"
+    try:
+        if now - float(json.loads(stamp.read_text(encoding="utf-8")).get("at", 0)) < SESSION_NOTE_EVERY_S:
+            return
+    except (OSError, ValueError):
+        pass
+    for platform in config.browser_sessions:
+        found = config.cookies.get(platform) or session.signed_in_profile(platform)
+        counts[f"session.{platform}.{'firefox' if found else 'none'}"] += 1
+    try:
+        stamp.parent.mkdir(parents=True, exist_ok=True)
+        stamp.write_text(json.dumps({"at": now}), encoding="utf-8")
+    except OSError:
+        pass
+
+
 def _watch_once(config: Config | None, engine: Engine | None, counts: Counter) -> None:
     config = config or Config.load()
     with run_lock() as got:
@@ -207,6 +231,7 @@ def _watch_once(config: Config | None, engine: Engine | None, counts: Counter) -
             counts["skipped.already_running"] += 1
             return
         engine = engine or Engine(config.engine_url)
+        note_sessions(config, counts)
         state = State()
         try:
             heartbeat("claim")
