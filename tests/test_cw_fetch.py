@@ -460,6 +460,18 @@ class ChainTests(unittest.TestCase):
                          ["tiktok_7430000000000000003_01.jpg", "tiktok_7430000000000000003_02.jpg"])
         self.assertTrue((self.root / "got" / "tiktok_7430000000000000003" / "post.json").is_file())
 
+    def test_a_last_resort_that_can_only_say_other_never_hides_a_login_wall(self):
+        # 28 October 2026, an Instagram post Krish pasted: every route refused it, and Apify named the login wall.
+        with mock.patch.object(instagram_embed, "fetch", side_effect=FetchFailed("not_found", "ig_removed")), \
+                mock.patch.object(ytdlp, "fetch_carousel", side_effect=FetchFailed("other", "no_media")), \
+                mock.patch.object(instaloader_fetch, "fetch", side_effect=FetchFailed("other", "instaloader_error")), \
+                mock.patch.object(apify, "fetch", side_effect=FetchFailed("login_wall", "apify_login_required")), \
+                mock.patch.object(instagram_embed, "cover_only", side_effect=FetchFailed("other", "ig_embed_no_data")):
+            result = fetch("https://www.instagram.com/p/DAbCdEfGhIj/", self.root / "got", Config(), resolve=False)
+        self.assertIsNone(result.post)
+        self.assertEqual((result.status_class, result.detail), ("login_wall", "apify_login_required"))
+        self.assertEqual(result.attempts[-1].outcome, "other:ig_embed_no_data")
+
     def test_every_method_failing_reports_the_last_steps_class(self):
         with mock.patch.object(instagram_embed, "fetch", side_effect=FetchFailed("other", "ig_licensed_audio")), \
                 mock.patch.object(ytdlp, "fetch", side_effect=FetchFailed("blocked", "empty_media_response")), \

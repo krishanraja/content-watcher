@@ -1732,7 +1732,7 @@ public post needs neither his session nor Apify (inference from those tests).
   to it once.
 - A guest cannot tell a login-only post from a refused request, since both can show a sign-in page (inference). When
   every logged-out step that ran saw a sign-in page or returned no post, record `li_login_only` and go to step 5.
-- When nothing works, the request is `failed` with the class of the last step tried.
+- When nothing works, the request is `failed` with the class of the last step tried that named one other than `other` (a last resort that can only say `other`, such as Instagram's cover-only step, never hides an earlier `login_wall`; 2026-10-28).
 
 **On the home Windows machine (residential IP), for each pasted link.**
 
