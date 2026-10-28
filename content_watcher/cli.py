@@ -99,7 +99,7 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.set_defaults(func=_doctor)
 
     config = sub.add_parser("config", help="set this machine's settings")
-    config.add_argument("--filing", choices=("local", "drive"))
+    config.add_argument("--filing", choices=("local", "drive", "engine"))
     config.add_argument("--production-inspo", "--video-inspiration", dest="video_inspiration",
                         help="synced path of Ventures > Inspiration > Production Inspo")
     config.add_argument("--content-inspo", "--cold-ideas", dest="cold_ideas",

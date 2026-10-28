@@ -22,7 +22,9 @@ def state_dir() -> Path:
 @dataclass
 class Config:
     # Where fetched media is filed. "drive" files into the two synced Drive folders below, where Krish's own
-    # drops go (D1, Krish 2026-10-24: "Yes to Drive filing"). "local" keeps it on this machine only.
+    # drops go (D1, Krish 2026-10-24: "Yes to Drive filing"). "local" keeps it on this machine only. "engine" is the
+    # cloud backup's (Krish, 2026-10-28: "yes build the cloud backup"): no synced folder, so each file goes to the
+    # same two Drive folders through the engine's upload route (content-engine api/watch/upload.ts).
     filing: str = "drive"
     # The two folders in Ventures > Inspiration (Krish, 2026-10-24: "one for the content I like ... and one for
     # production quality I like"). The keys stay as the contract's folder values.
