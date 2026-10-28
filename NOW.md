@@ -1,7 +1,7 @@
 ---
 repo: krishanraja/content-watcher
 product: Content Watcher
-as_of: 2026-10-27
+as_of: 2026-10-28
 head: 622001d
 lifecycle: beta
 production_url: none
@@ -36,6 +36,7 @@ Lifecycle: beta. Content Watcher is built, merged and installed on both home com
 
 ## What changed recently
 
+- 2026-10-28 **A cloud backup files through the engine.** Krish, 2026-10-28: "yes build the cloud backup". The same package can run with `filing: "engine"` (content-engine `.github/workflows/watch-cloud.yml`, as `cloud-gh`), taking only a link neither home computer claimed within 15 minutes. Having no synced folder, it asks the engine for a Drive upload session in the folder its tag names (`POST /api/watch/upload`, `docs/WATCH_API.md`), sends the bytes straight to Google, and checks the sha256 Google answers; the same bytes already filed are not sent again. 4 new tests (`tests/test_cw_cloud.py`), 88 in all, pass. Whether the engine may add files to the folders as Krish is answered by `GET /api/watch/upload`. Also found that day, from the engine with nobody opening a log: both home computers' task answers 0x8007010B ("The directory name is invalid"), so Windows could not start it (suspected: the local folder was renamed with the repository on 24 October); content-engine's recordings pass now re-runs `scripts/install-content-watch.ps1` from wherever the clone is.
 - 2026-10-28 **A run can no longer hang, and every run says what went wrong.** Both home computers stopped logging at 08:00 on 25 and 26 October and a press of Run did nothing (suspected: a run that never ended held the scheduled task, which ignores new starts while one runs). Each run now ends after 20 minutes at most and logs the stage it was in, writes a heartbeat (`watch.heartbeat`: stage and time only), logs a run that cannot start by its error class, and names why the engine could not be reached (`engine_tls_untrusted`, `engine_dns_failed`, `engine_blocked`, `engine_connection_refused`, `engine_proxy` ...; until now only `engine_unreachable`, which one machine logged every minute). It checks the engine's certificate against Windows' own store (`truststore`). Krish, 2026-10-28: "i should never really need to copy and paste log files to you like this, ever, this is ridiculous". content-engine's recordings pass, which updates itself on both computers, now keeps this repository up to date there, starts a run when none has logged lately, stops one that is stuck, and sends this log's classes to the engine, where a session reads them.
 - 2026-10-27 **Docs reconciled to the code.** NOW.md called the first Content Watcher build "not merged" on a branch that merged as #3 on 2026-10-24, still listed LinkedIn and YouTube steps as provisional or "to build" after #4 built them, and named the repository `video-compression`. A cold reader would also have found no `docs/history/LOG.md`, which this file names. `docs/BRIEF.md` and `docs/FETCH_METHODS.md` now say which of their recommendations the code no longer follows; `docs/STATE.md` is scoped to the compression engine. The count of tests is 80, not 52 or 78.
 - 2026-10-24 **Installed on both home computers** (readback pasted by Krish). Scheduled task `Mindmake Content Watcher` Ready on each; `doctor` all ok for Python, FFmpeg, faster-whisper, yt-dlp, curl_cffi, the bgutil token helper, cobalt (Docker), Deno, Instaloader, the engine key, Apify (cap $5, $0 spent) and both Drive folders. Tesseract and Poppler were then installed on the Surface; `tools.which` finds them off PATH since #7, because the Windows installers do not put them on PATH.
@@ -50,10 +51,10 @@ Lifecycle: beta. Content Watcher is built, merged and installed on both home com
 
 - **D1 answered** (2026-10-24, "Yes to Drive filing"): fetched media files into his two Drive folders. **D2 answered** ("Apify with $5 cap"). Both are in `docs/DECISIONS.md`.
 - **Waiting on Krish: D3**, the North Star for the renamed repository. `docs/NORTH_STAR.md` still holds the compression-only wording and number (set 2026-10-18, metric added 2026-10-23, both before the rename); no answer to D3 is in the record. The proposed wording is in `docs/BRIEF.md` section 3. Only Krish changes the North Star.
-- **Next action: the live test.** One Instagram reel and one YouTube Short pasted on the Inspiration board, read back on the engine.
+- **Next action: the live test, under way.** Krish pasted a YouTube Short and an Instagram post on 27 October (both tagged Content); they wait on the home computers' repaired task, or on the cloud backup once the engine can file into Drive.
 - Checkpoint still open (brief section 10 step 2): read one real saved video from his Inspiration folder and compare its `read.md` token count with the taste ledger's eight 512px frames. Needs the home computer or his go-ahead to read one Drive file.
 - Measure the North Star number and record it on the first line under "Where it is right now".
-- North Star check (2026-10-27): recalibration proposed. The North Star still names only the compression engine, and this repository now also holds Content Watcher (D3 in `docs/DECISIONS.md`; the wording proposed to Krish is in `docs/BRIEF.md` section 3).
+- North Star check (2026-10-28): recalibration proposed. The North Star still names only the compression engine, and this repository now also holds Content Watcher (D3 in `docs/DECISIONS.md`; the wording proposed to Krish is in `docs/BRIEF.md` section 3).
 
 ## Read next
 

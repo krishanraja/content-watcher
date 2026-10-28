@@ -29,6 +29,23 @@ Body: `{ "id", "machine", "status", "status_class"?, "shape"?, "media"?, "reads"
 
 The machine only reports for a request it holds (`claimed_by` = its `machine`); the route refuses others.
 
+## The cloud backup's routes (2026-10-28)
+
+Krish, 2026-10-28: "yes build the cloud backup". The same package runs on GitHub's machine as `cloud-gh`
+(content-engine `.github/workflows/watch-cloud.yml`), with `filing: "engine"` because it has no synced Drive folder.
+
+- `GET /api/watch/claim?machine=NAME`: `{ "waiting": n }`, how many requests this machine could claim now, claiming
+  none. A machine whose name starts with `cloud` may claim a request only once it has waited 15 minutes, so the home
+  computers get it first.
+- `POST /api/watch/upload` with `{ "id", "machine", "folder", "name", "sha256", "bytes", "mime" }`, only from a
+  `cloud` machine holding the request's claim. The engine checks the folder for the name and its `_v2`..`_v9` names
+  first: the same sha256 answers `{ "exists": true, "name" }`; otherwise it opens a resumable Drive upload session as
+  Krish in that folder under the first free name and answers `{ "exists": false, "name", "upload_url" }`. The machine
+  `PUT`s the bytes to `upload_url` with no key, and Google answers the new file's `sha256Checksum`; a different hash
+  fails the request as a filing error. Add only, as on the home computers (`filing.py`).
+- `GET /api/watch/upload`: whether the engine can add a file to each folder, and the scope it would use
+  (`drive.file`, then `drive`) or Google's reason for each refusal. It writes nothing.
+
 ## `POST /api/watch/read`
 
 Body: `{ "machine", "reads": [row, ...] }`: readings of files Krish dropped by hand, with no request. Same upsert as

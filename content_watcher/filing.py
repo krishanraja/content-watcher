@@ -48,10 +48,26 @@ def file_one(source: Path, directory: Path) -> tuple[Path, str]:
     return target, sha
 
 
-def file_post(post: Post, config: Config, lane: str | None = None) -> list[dict]:
-    """File every media file of the post, in post order. Returns the contract's media entries."""
+def file_post(post: Post, config: Config, lane: str | None = None, upload=None) -> list[dict]:
+    """File every media file of the post, in post order. Returns the contract's media entries.
+
+    With filing "engine" (the cloud backup, which has no synced Drive folder) each file goes through
+    upload(folder, source, sha256), which answers the name it was filed under in Drive."""
     shape = post.infer_shape()
     folder = folder_for(shape, lane)
+    if config.filing == "engine":
+        if upload is None:
+            raise FilingError("no_uploader")
+        entries = []
+        for source in post.media:
+            if kind_of(source) is None:
+                continue
+            sha = tools.sha256_file(source)
+            entries.append({
+                "name": upload(folder, source, sha), "sha256": sha, "mime": mime_of(source),
+                "bytes": source.stat().st_size, "folder": folder,
+            })
+        return entries
     directory = config.folder_path(folder)
     if directory is None:
         raise FilingError("folder_not_set")

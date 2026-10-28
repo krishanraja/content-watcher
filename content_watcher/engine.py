@@ -92,3 +92,29 @@ class Engine:
 
     def read(self, machine: str, reads: list[dict]) -> dict:
         return self._post("/api/watch/read", {"machine": machine, "reads": reads})
+
+    def upload(self, request_id: str, machine: str, *, folder: str, name: str, sha256: str, size: int, mime: str) -> dict:
+        """The cloud backup's filing: the engine opens a Drive upload session in the lane's folder, as Krish, or says
+        the same bytes are already there (content-engine api/watch/upload.ts)."""
+        return self._post("/api/watch/upload", {"id": request_id, "machine": machine, "folder": folder, "name": name,
+                                                "sha256": sha256, "bytes": size, "mime": mime})
+
+
+def put_upload(url: str, path, mime: str, *, timeout: float = 600, opener=None) -> dict:
+    """Send a file's bytes to the Drive upload session the engine opened. Google answers the new file's name, size
+    and sha256. The session URL is the only authority; no key travels with it."""
+    opener = opener or urllib.request.build_opener()
+    with open(path, "rb") as handle:
+        request = urllib.request.Request(url, data=handle, method="PUT", headers={
+            "Content-Type": mime, "Content-Length": str(path.stat().st_size)})
+        try:
+            with opener.open(request, timeout=timeout) as response:
+                raw = response.read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            exc.close()
+            raise EngineError(f"drive_upload_http_{exc.code}") from None
+        except (socket.timeout, TimeoutError):
+            raise EngineError("drive_upload_timeout") from None
+        except (urllib.error.URLError, ssl.SSLError, ConnectionError):
+            raise EngineError("drive_upload_unreachable") from None
+    return json.loads(raw) if raw.strip() else {}

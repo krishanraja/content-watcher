@@ -13,10 +13,10 @@ from pathlib import Path
 
 from . import ENGINE_REV
 from .config import Config, state_dir
-from .engine import Engine, EngineError
+from .engine import Engine, EngineError, put_upload
 from .fetch import fetch
 from .filing import FOLDERS, FilingError, file_post
-from .post import Post, kind_of
+from .post import Post, kind_of, mime_of
 from .read.reader import read_path, read_post
 from .state import State, run_lock
 
@@ -62,6 +62,26 @@ def log_line(counts: Counter) -> Path:
     return target
 
 
+def engine_uploader(engine: Engine, request_id: str, machine: str, put=put_upload):
+    """Filing for the cloud backup: the engine opens a Drive session in the lane's folder and the bytes go straight to
+    Google, which answers the file's sha256. A different sha256 is a failed copy; nothing is ever deleted."""
+    def upload(folder: str, source: Path, sha: str) -> str:
+        mime = mime_of(source)
+        try:
+            answer = engine.upload(request_id, machine, folder=folder, name=source.name, sha256=sha,
+                                   size=source.stat().st_size, mime=mime)
+            if answer.get("exists"):
+                return str(answer["name"])
+            filed = put(answer["upload_url"], source, mime)
+        except EngineError as failure:
+            raise FilingError(failure.status_class) from None
+        got = str(filed.get("sha256Checksum") or "").lower()
+        if got and got != sha:
+            raise FilingError("copy_mismatch")
+        return str(filed.get("name") or answer["name"])
+    return upload
+
+
 def handle_request(request: dict, config: Config, engine: Engine, state: State, counts: Counter) -> None:
     request_id = str(request["id"])
     heartbeat("fetch")
@@ -79,7 +99,8 @@ def handle_request(request: dict, config: Config, engine: Engine, state: State, 
     shape = post.infer_shape()
     heartbeat("file")
     try:
-        media = file_post(post, config, request.get("lane"))
+        upload = engine_uploader(engine, request_id, config.machine) if config.filing == "engine" else None
+        media = file_post(post, config, request.get("lane"), upload)
     except FilingError as failure:
         engine.report(request_id, config.machine, "failed", status_class="other", shape=shape)
         counts[f"failed.filing.{failure.status_class}"] += 1
