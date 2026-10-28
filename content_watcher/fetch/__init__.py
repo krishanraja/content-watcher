@@ -51,6 +51,8 @@ def _methods(link: urls.PostLink, config: Config) -> list[tuple[str, Callable[[P
         cobalt_step()
         actor = "instagram_reel" if link.kind == "reel" else "instagram_post"
         chain.append((f"apify_{actor}", lambda f: apify.fetch(url, platform, f, config, actor_key=actor, expected_id=post_id)))
+        # Age-restricted posts: every logged-out scraper is refused, this downloader is not (28 October 2026).
+        chain.append(("apify_instagram_downloader", lambda f: apify.fetch_instagram_downloader(url, post_id, f, config)))
         if cookies:
             chain.append(("gallerydl_cookies", lambda f: gallerydl.fetch(url, platform, f, cookies_profile=cookies)))
         chain.append(("instagram_cover_only", lambda f: instagram_embed.cover_only(url, post_id, f)))

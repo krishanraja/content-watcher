@@ -13,8 +13,8 @@ each step is `docs/FETCH_METHODS.md`.
 
 | Platform | Chain |
 |---|---|
-| Instagram reel | Instagram's embed player, yt-dlp, Instaloader, cobalt (if set up), Apify reel scraper, then the cover picture and caption as a last resort |
-| Instagram post or carousel | Instagram's embed player, yt-dlp carousel mode, Instaloader, cobalt, Apify post scraper, then the cover picture and caption |
+| Instagram reel | Instagram's embed player, yt-dlp, Instaloader, cobalt (if set up), Apify reel scraper, Apify downloader (`snapinsta~instagram-downloader-api`, for age-restricted posts), then the cover picture and caption as a last resort |
+| Instagram post or carousel | Instagram's embed player, yt-dlp carousel mode, Instaloader, cobalt, Apify post scraper, Apify downloader (age-restricted posts), then the cover picture and caption |
 | TikTok video | yt-dlp (a file with no sound moves on), gallery-dl, the post page, TikWM, Tikmate, cobalt, Apify |
 | TikTok photo post | gallery-dl, the post page, TikWM, cobalt, Apify |
 | YouTube | oEmbed check (a removed or private video stops here), yt-dlp with Deno and the bgutil token helper, yt-dlp as the mobile client, cobalt, for a Short the Apify downloader (about $0.02), then words only: youtube-transcript-api, Apify transcripts |
@@ -49,8 +49,12 @@ Tested live on 2026-10-24 from a cloud machine with the research's public TikTok
 - **cobalt's public instance**: refuses without a key (`error.api.auth.jwt.missing`), so the watcher uses a cobalt
   run on the home computer (`scripts/cobalt/README.md`) or a hosted one with `COBALT_API_KEY`.
 - **Instagram download sites** (snapinsta, saveig, sssinstagram, fastdl, igram, saveinsta): none answered a plain
-  request; they hide the download step behind tokens their pages compute in the browser. Not built. cobalt covers the
-  same ground on the home computer.
+  request; they hide the download step behind tokens their pages compute in the browser. Their sites are not called.
+  But snapinsta's Apify actor (`snapinsta~instagram-downloader-api`, about $0.0004 a request) is a step since
+  2026-10-28: Krish's carousel `/p/DfAY9PWFuEX` was age-restricted, so every logged-out route was refused (Apify's
+  scraper: "Restricted access ... The post is age-restricted"), and this actor returned all 16 slides. It gives the
+  files only, so such a reading carries no caption or author; each file's extension comes from its file type, because
+  the address can say `.heic` over JPEG bytes.
 
 Every free site sees the link it is sent and has no contract or published terms. Krish's message above is the go-ahead
 for them; Apify, the only paid step, stays under the $5 cap.
