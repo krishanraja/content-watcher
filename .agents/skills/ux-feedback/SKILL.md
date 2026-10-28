@@ -35,9 +35,11 @@ recording itself is never moved, changed or deleted.
 
 ## From Control Center
 
-Krish can also add a recording in Control Center's feedback box. A home computer then does the same run on its own
-and the engine emails him the Claude Code prompt with links to the feedback file and the stills in Drive
-(`docs/WATCH_API.md`, "Feedback videos"). This skill is for a recording he hands over in a session instead.
+Krish can also send a recording from Control Center's Bugs & Issues page: the Drive link to the MP4 and the venture
+it is about. A home computer then does the same run on the copy his Drive synced to it, puts the stills and
+`feedback.md` in Ventures > Bugs & Issues > <venture> > <day> <name>, and the engine emails him the Claude Code prompt
+naming that product's repository (`docs/WATCH_API.md`, "Feedback videos"). This skill is for a recording he hands
+over in a session instead.
 
 ## Keep it separate
 

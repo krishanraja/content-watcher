@@ -72,7 +72,7 @@ def _doctor(args: argparse.Namespace) -> int:
 
 def _config(args: argparse.Namespace) -> int:
     config = Config.load()
-    for field in ("filing", "video_inspiration", "cold_ideas", "engine_url", "machine", "whisper_model", "cobalt_url"):
+    for field in ("filing", "video_inspiration", "cold_ideas", "drive_root", "engine_url", "machine", "whisper_model", "cobalt_url"):
         value = getattr(args, field)
         if value is not None:
             setattr(config, field, value)
@@ -130,6 +130,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="synced path of Ventures > Inspiration > Production Inspo")
     config.add_argument("--content-inspo", "--cold-ideas", dest="cold_ideas",
                         help="synced path of Ventures > Inspiration > Content Inspo")
+    config.add_argument("--drive-root", dest="drive_root",
+                        help="synced path of My Drive, where feedback videos are read from (default: three up from Production Inspo)")
     config.add_argument("--engine-url", dest="engine_url")
     config.add_argument("--machine")
     config.add_argument("--whisper-model", dest="whisper_model")

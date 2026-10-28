@@ -67,8 +67,12 @@ before reading: the folders also hold what the other machine and the cloud filed
 ## Feedback videos (2026-10-28)
 
 Krish, 2026-10-28: "somewhere in my control centre where I can specifically add a feedback video that's not
-inspiration ... It would trigger only this one part of the system", with the result as an email holding "a neat and
-tidy Claude Code prompt" and links to the feedback file and the Drive folder of stills. A queue of its own
+inspiration ... It would trigger only this one part of the system", then "specify which venture this feedback is
+for", with the outputs "in the right places inside the Ventures folder (not the inspiration folder)", and the input:
+"videos I'll take on my phone as MP4 and upload them to Google Drive ... I probably want to send the link to the MP4
+or the video file, which is stored in my Google Drive."
+
+He pastes or shares the Drive link on Control Center's Bugs & Issues page and taps the venture. A queue of its own
 (content-engine migration `20261116090000_ux_feedback_recordings.sql`, `apps/control-plane/api/ux-feedback/`): it
 never touches `content_watch_requests`, `content_reads` or the Inspiration folders. The client is
 `content_watcher/feedback.py`, one recording a run, after the Inspiration queue, on a home computer only and only
@@ -76,19 +80,20 @@ when the run has 12 minutes left; trouble with these routes is counted under `fe
 reader.
 
 - `POST /api/ux-feedback/claim` with `{ "machine" }`: `{ "recording": { "id", "name", "note", "mime", "bytes",
-  "attempts", "download_url" } }` or `null`. The download URL is signed for an hour and takes no key. A machine whose
-  name starts with `cloud` is refused. A claim is stale after an hour; the third stale claim fails as `timeout`.
-- `POST /api/ux-feedback/drive` with `{ "id", "machine", "files": [{ "name", "mime", "bytes" }] }` (`image/jpeg`
-  stills, `text/markdown` for `feedback.md`): the engine makes the recording's folder `<day> <name>` inside
-  "UX Feedback" once and opens a resumable session per file, as Krish; the machine `PUT`s each file and Google answers
-  its id. Add only.
-- `POST /api/ux-feedback/report` with `{ "id", "machine", "status": "done", "feedback_file_id", "summary" }` or
-  `{ ..., "status": "failed", "status_class" }`. Done sends Krish one email: the links and a Claude Code prompt
-  listing the moments he flagged. Below 3 attempts a failure goes back to the queue.
-
-The machine downloads the recording, runs `content-watch timeline --profile ux` on it, deletes its own copy (the
-recording stays in the private bucket), uploads the stills, then `feedback.md`, whose every line links its still in
-Drive, and reports.
+  "md5", "drive_file_id", "drive_path", "venture", "venture_label", "attempts" } }` or `null`. No link and no Drive
+  key: the machine reads the copy his Drive has synced to it, at `drive_path` under the synced My Drive
+  (`config.drive_root`, else three folders up from Production Inspo), checked by size and MD5. Not there yet goes
+  back to the queue as `not_synced_yet` (a failed try waits 10 minutes times its tries); other bytes under that name
+  is `not_the_same_file`. The recording is never copied, moved or deleted. A `cloud` machine is refused.
+- `POST /api/ux-feedback/drive` with `{ "id", "machine", "files": [{ "name", "mime", "bytes", "place" }] }`:
+  `image/jpeg` stills go to `stills`, `feedback.md` (`text/markdown`) to `folder`. The engine finds Ventures > Bugs &
+  Issues by the Drive map (`bugs_and_issues`, krishanraja/hunter `drivemap.py`), his venture folder in it by slug or
+  label (else makes it with the label), and makes the recording's `<day> <name>` folder and its `Stills` once.
+  Nothing is made at the top of his Drive. Add only.
+- `POST /api/ux-feedback/report` with `{ "id", "machine", "status": "done", "feedback_file_id", "summary" }` (counts,
+  the UX signals heard, `width`, `height`, `portrait`) or `{ ..., "status": "failed", "status_class" }`. Done writes
+  `Claude Code prompt.md` into the folder (naming the product, its domain and its repository, and "recorded on my
+  phone" for a portrait recording) and emails Krish the same prompt with the links.
 
 ## Logs
 

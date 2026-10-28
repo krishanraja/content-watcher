@@ -1,6 +1,8 @@
-"""Feedback videos from Control Center: claimed, timelined here, stills and feedback file to Drive, one report; never the
-Inspiration queue, content_reads or the drop folders."""
+"""Feedback videos linked in Control Center: read from his synced Drive (never copied, moved or deleted), timelined here,
+stills to Stills and the feedback file to the recording's folder, one report; never the Inspiration queue,
+content_reads or the drop folders."""
 
+import hashlib
 import json
 import os
 import tempfile
@@ -21,6 +23,8 @@ try:
     HAS_NUMPY = True
 except Exception:  # noqa: BLE001
     HAS_NUMPY = False
+
+ID = "00000000-0000-4000-8000-000000000001"
 
 
 class FeedbackEngine:
@@ -83,11 +87,17 @@ class FeedbackLaneTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix="cw-feedback-test-")
         cls.root = Path(cls.temp.name)
-        cls.video = cls.root / "uploaded.mp4"
-        ffmpeg("-f", "lavfi", "-i", "color=c=white:s=1280x720:d=3:r=25",
-               "-f", "lavfi", "-i", "color=c=navy:s=1280x720:d=3:r=25",
+        # His synced Drive: My Drive > Ventures > Bugs & Issues > run.mp4, and Production Inspo beside it.
+        cls.drive = cls.root / "My Drive"
+        cls.bugs = cls.drive / "Ventures" / "Bugs & Issues"
+        cls.bugs.mkdir(parents=True)
+        (cls.drive / "Ventures" / "Inspiration" / "Production Inspo").mkdir(parents=True)
+        cls.video = cls.bugs / "run.mp4"
+        ffmpeg("-f", "lavfi", "-i", "color=c=white:s=720x1280:d=3:r=25",
+               "-f", "lavfi", "-i", "color=c=navy:s=720x1280:d=3:r=25",
                "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0,format=yuv420p[v]", "-map", "[v]",
                "-c:v", "libx264", "-preset", "ultrafast", str(cls.video))
+        cls.md5 = hashlib.md5(cls.video.read_bytes()).hexdigest()
 
     @classmethod
     def tearDownClass(cls):
@@ -97,62 +107,76 @@ class FeedbackLaneTests(unittest.TestCase):
         self.state = Path(tempfile.mkdtemp(prefix="state-", dir=self.root))
         self.patch = mock.patch.dict(os.environ, {"CONTENT_WATCH_HOME": str(self.state)})
         self.patch.start()
-        self.config = Config(machine="Surface", engine_url="http://unused", whisper_model="tiny")
+        inspo = self.drive / "Ventures" / "Inspiration" / "Production Inspo"
+        self.config = Config(machine="Surface", engine_url="http://unused", whisper_model="tiny",
+                             video_inspiration=str(inspo))
 
     def tearDown(self):
         self.patch.stop()
 
     def job(self, **over):
-        return {"id": "00000000-0000-4000-8000-000000000001", "name": "Checkout run.mp4", "note": None,
-                "mime": "video/mp4", "bytes": self.video.stat().st_size, "attempts": 1,
-                "download_url": self.video.resolve().as_uri(), **over}
+        return {"id": ID, "name": "run.mp4", "note": "the invented checkout", "mime": "video/mp4",
+                "bytes": self.video.stat().st_size, "md5": self.md5, "drive_file_id": "src_ABCDEFGHIJ",
+                "drive_path": "Ventures/Bugs & Issues/run.mp4", "venture": "heartside", "venture_label": "Heartside",
+                "attempts": 1, **over}
 
-    def test_a_feedback_video_goes_to_drive_and_is_reported_done(self):
-        stub = FeedbackEngine(self.job())
-        uploaded: list = []
+    def run_once(self, job, **kw):
+        stub = FeedbackEngine(job)
         counts = Counter()
         try:
-            feedback.feedback_once(self.config, Engine(stub.url, token="k"), counts, time_left_s=1200, put=fake_put(uploaded))
+            feedback.feedback_once(kw.pop("config", self.config), Engine(stub.url, token="k"), counts,
+                                   time_left_s=kw.pop("time_left_s", 1200), **kw)
         finally:
             stub.close()
+        return stub, counts
+
+    def test_the_synced_recording_is_read_in_place_and_its_outputs_go_to_drive(self):
+        before = self.video.read_bytes()
+        uploaded: list = []
+        stub, counts = self.run_once(self.job(), put=fake_put(uploaded))
         self.assertEqual(counts["feedback.done"], 1, dict(counts))
         self.assertEqual(stub.paths(), ["/api/ux-feedback/claim", "/api/ux-feedback/drive", "/api/ux-feedback/drive",
                                         "/api/ux-feedback/report"])
-        stills = [name for name, mime, _ in uploaded if mime == "image/jpeg"]
-        self.assertGreaterEqual(len(stills), 2)
-        self.assertEqual(uploaded[-1][:2], ("feedback.md", "text/markdown"))
+        stills_ask, feedback_ask = stub.calls[1][1]["files"], stub.calls[2][1]["files"]
+        self.assertEqual({f["place"] for f in stills_ask}, {"stills"})
+        self.assertEqual([(f["name"], f["place"]) for f in feedback_ask], [("feedback.md", "folder")])
+        self.assertGreaterEqual(len(stills_ask), 2)
         text = uploaded[-1][2].decode()
-        self.assertIn("Each line links the still of that moment in Drive.", text)
+        self.assertIn("Feedback on Heartside, from [run.mp4](https://drive.google.com/file/d/src_ABCDEFGHIJ/view).", text)
+        self.assertIn("What it is about, in your words: the invented checkout", text)
         self.assertIn("https://drive.google.com/file/d/drive_still_001", text)
         report = stub.calls[-1][1]
         self.assertEqual((report["status"], report["feedback_file_id"]), ("done", "drive_feedback"))
-        self.assertEqual(set(report["summary"]), {"duration_s", "stills", "images", "signals"})
-        work = self.state / "feedback" / self.job()["id"]
-        self.assertFalse((work / "Checkout run.mp4").exists())  # this machine's copy of the recording is gone
-        self.assertTrue(any(work.glob("*/feedback.md")))
+        self.assertEqual((report["summary"]["width"], report["summary"]["height"], report["summary"]["portrait"]),
+                         (720, 1280, True))
+        # His recording is exactly where he left it, byte for byte.
+        self.assertEqual(self.video.read_bytes(), before)
+        self.assertEqual(sorted(p.name for p in self.bugs.iterdir()), ["run.mp4"])
+
+    def test_a_recording_not_synced_yet_goes_back_to_the_queue(self):
+        stub, counts = self.run_once(self.job(drive_path="Ventures/Bugs & Issues/later.mp4"))
+        self.assertEqual(stub.paths(), ["/api/ux-feedback/claim", "/api/ux-feedback/report"])
+        self.assertEqual(stub.calls[-1][1]["status_class"], "not_synced_yet")
+        stub, _ = self.run_once(self.job(bytes=10))  # still arriving: the size is not the size yet
+        self.assertEqual(stub.calls[-1][1]["status_class"], "not_synced_yet")
+
+    def test_different_bytes_under_that_name_are_refused(self):
+        stub, _ = self.run_once(self.job(md5="0" * 32))
+        self.assertEqual(stub.calls[-1][1]["status_class"], "not_the_same_file")
+
+    def test_no_synced_drive_and_a_path_that_climbs_out_are_refused(self):
+        stub, _ = self.run_once(self.job(), config=Config(machine="Surface", engine_url="http://unused"))
+        self.assertEqual(stub.calls[-1][1]["status_class"], "no_drive_root")
+        stub, _ = self.run_once(self.job(drive_path="Ventures/../../secret.mp4"))
+        self.assertEqual(stub.calls[-1][1]["status_class"], "bad_drive_path")
 
     def test_a_cloud_machine_and_a_short_run_never_claim(self):
-        stub = FeedbackEngine(self.job())
-        counts = Counter()
-        try:
-            cloud = Config(machine="cloud-gh", engine_url="http://unused")
-            feedback.feedback_once(cloud, Engine(stub.url, token="k"), counts, time_left_s=1200)
-            feedback.feedback_once(self.config, Engine(stub.url, token="k"), counts, time_left_s=60)
-        finally:
-            stub.close()
+        cloud = Config(machine="cloud-gh", engine_url="http://unused")
+        stub, _ = self.run_once(self.job(), config=cloud)
+        self.assertEqual(stub.paths(), [])
+        stub, counts = self.run_once(self.job(), time_left_s=60)
         self.assertEqual(stub.paths(), [])
         self.assertEqual(counts["feedback.deferred"], 1)
-
-    def test_a_short_download_is_reported_failed_by_class(self):
-        stub = FeedbackEngine(self.job(bytes=10))
-        counts = Counter()
-        try:
-            feedback.feedback_once(self.config, Engine(stub.url, token="k"), counts, time_left_s=1200, put=fake_put([]))
-        finally:
-            stub.close()
-        self.assertEqual(stub.paths(), ["/api/ux-feedback/claim", "/api/ux-feedback/report"])
-        self.assertEqual(stub.calls[-1][1], {"id": self.job()["id"], "machine": "Surface", "status": "failed",
-                                             "status_class": "download_incomplete"})
 
     def test_an_engine_without_the_routes_does_not_stop_the_drop_reader(self):
         stub = FeedbackEngine(None, missing=("/api/ux-feedback/claim",))
@@ -163,23 +187,15 @@ class FeedbackLaneTests(unittest.TestCase):
             stub.close()
         self.assertEqual(counts["feedback.engine_route_missing"], 1)
         drops.assert_called_once()
-        self.assertNotIn("/api/watch/read", stub.paths())
 
     def test_the_lane_never_reaches_the_inspiration_routes(self):
-        stub = FeedbackEngine(self.job())
-        try:
-            feedback.feedback_once(self.config, Engine(stub.url, token="k"), Counter(), time_left_s=1200, put=fake_put([]))
-        finally:
-            stub.close()
+        stub, _ = self.run_once(self.job(), put=fake_put([]))
         self.assertFalse([path for path in stub.paths() if path.startswith("/api/watch/")])
 
-    def test_failure_classes_take_the_engine_shape(self):
-        stub = FeedbackEngine(self.job(download_url="http://127.0.0.1:9/nothing"))
-        try:
-            feedback.feedback_once(self.config, Engine(stub.url, token="k"), Counter(), time_left_s=1200)
-        finally:
-            stub.close()
-        self.assertRegex(stub.calls[-1][1]["status_class"], r"^[a-z_]{1,40}$")
+    def test_the_drive_root_is_three_up_from_production_inspo_or_set(self):
+        self.assertEqual(self.config.my_drive_root(), self.drive)
+        self.assertEqual(Config(drive_root="/x/My Drive").my_drive_root(), Path("/x/My Drive"))
+        self.assertIsNone(Config().my_drive_root())
 
 
 if __name__ == "__main__":

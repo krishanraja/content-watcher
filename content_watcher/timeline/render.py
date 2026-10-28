@@ -38,10 +38,13 @@ def timeline_lines(data: dict, heading: str = "##", links: dict[str, str] | None
     return out
 
 
-def render_timeline_md(data: dict, links: dict[str, str] | None = None) -> str:
-    """The timeline as a file; with `links` (a still's file to its Drive link) each line links its picture."""
+def render_timeline_md(data: dict, links: dict[str, str] | None = None, intro: list[str] | None = None) -> str:
+    """The timeline as a file; with `links` (a still's file to its Drive link) each line links its picture, and
+    `intro` lines go under the title."""
     source = data.get("source") or {}
     lines = [f"# Timeline: {source.get('file', 'video')}", ""]
+    if intro:
+        lines += [*intro, ""]
     lines.append(f"{data['duration_s']} s, profile {data['profile']} ({data.get('profile_reason') or 'asked for'}).")
     words = data.get("words") or {}
     heard = data.get("heard")
