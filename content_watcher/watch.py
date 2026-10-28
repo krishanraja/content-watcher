@@ -14,6 +14,7 @@ from pathlib import Path
 from . import ENGINE_REV
 from .config import Config, state_dir
 from .engine import Engine, EngineError, put_upload
+from .fetch import apify as paid
 from .fetch import fetch
 from .filing import FOLDERS, FilingError, file_post
 from .post import Post, kind_of, mime_of
@@ -87,7 +88,8 @@ def handle_request(request: dict, config: Config, engine: Engine, state: State, 
     heartbeat("fetch")
     work = state_dir() / "fetch" / request_id
     work.mkdir(parents=True, exist_ok=True)
-    result = fetch(request["url"], work, config)
+    with paid.engine_runs(engine, request_id, config.machine):
+        result = fetch(request["url"], work, config)
     for attempt in result.attempts:
         counts[f"method.{attempt.method}.{attempt.outcome.split(':')[0]}"] += 1
     if result.post is None:
