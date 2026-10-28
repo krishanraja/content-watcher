@@ -30,6 +30,9 @@ class Config:
     # production quality I like"). The keys stay as the contract's folder values.
     video_inspiration: str | None = None  # synced path of Production Inspo (Drive 1QxrzxISYFXq0er0DG0XSapm7qhvuRmh-)
     cold_ideas: str | None = None  # synced path of Content Inspo (Drive 1FNztJOU82M8zb6IIbUAbvuI6Kr0pF5Hu)
+    # The synced My Drive itself, where a feedback video he links in Control Center is read from (feedback.py).
+    # Unset: three folders up from Production Inspo (My Drive > Ventures > Inspiration > Production Inspo).
+    drive_root: str | None = None
     # How Instagram and LinkedIn are fetched (D2): Firefox profile names allowed for cookies, per platform.
     cookies: dict[str, str] = field(default_factory=dict)
     # Platforms where his own signed-in Firefox session, found on this machine, may fetch what only a signed-in account
@@ -67,6 +70,15 @@ class Config:
 
     def local_library(self) -> Path:
         return state_dir() / "library"
+
+    def my_drive_root(self) -> Path | None:
+        """The synced My Drive on this machine, or None when neither it nor Production Inspo is set."""
+        if self.drive_root:
+            return Path(self.drive_root)
+        if self.video_inspiration:
+            parents = Path(self.video_inspiration).parents
+            return parents[2] if len(parents) > 2 else None
+        return None
 
     def folder_path(self, folder: str) -> Path | None:
         """The directory a contract folder name (video_inspiration, cold_ideas) files into."""

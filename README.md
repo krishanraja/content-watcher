@@ -13,10 +13,12 @@ pip install -e ".[watch]"          # faster-whisper, OpenCV, yt-dlp, gallery-dl,
 content-watch doctor                # what this machine can and cannot do, naming each missing piece
 content-watch read path/to/video.mp4 --out readings      # read.json + read.md, measured locally
 content-watch fetch "https://www.tiktok.com/@a/video/1" --out fetched
+content-watch timeline path/to/recording.mp4 --profile ux   # stills with what was said and shown at each; local only
 content-watch watch --once          # claim pasted links, fetch, file, read, report; then read new drops
 ```
 
 - What a reading holds: [`docs/READ_FORMAT.md`](docs/READ_FORMAT.md).
+- Every video reading carries a timeline of stills; a narrated feedback recording gets one on its own with the `ux-feedback` skill (`.agents/skills/ux-feedback/SKILL.md`), which never reaches inspirationhouse.
 - How the home computers reach the system: [`docs/WATCH_API.md`](docs/WATCH_API.md).
 - The build brief and the decisions only Krish makes: [`docs/BRIEF.md`](docs/BRIEF.md), [`docs/DECISIONS.md`](docs/DECISIONS.md).
 - Every way the watcher tries to get a post, per platform: [`docs/FALLBACKS.md`](docs/FALLBACKS.md); the research behind it: [`docs/FETCH_METHODS.md`](docs/FETCH_METHODS.md).

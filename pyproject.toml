@@ -44,4 +44,4 @@ Homepage = "https://github.com/krishanraja/content-watcher"
 Issues = "https://github.com/krishanraja/content-watcher/issues"
 
 [tool.setuptools]
-packages = ["video_compression", "content_watcher", "content_watcher.read", "content_watcher.fetch"]
+packages = ["video_compression", "content_watcher", "content_watcher.read", "content_watcher.fetch", "content_watcher.timeline"]

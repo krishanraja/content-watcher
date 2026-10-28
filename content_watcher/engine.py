@@ -113,6 +113,24 @@ class Engine:
         return self._post("/api/watch/upload", {"id": request_id, "machine": machine, "folder": folder, "name": name,
                                                 "sha256": sha256, "bytes": size, "mime": mime})
 
+    def feedback_claim(self, machine: str) -> dict | None:
+        """A feedback video Krish added in Control Center, with a signed URL to download it from, or None
+        (content-engine api/ux-feedback/claim.ts). Home computers only."""
+        recording = self._post("/api/ux-feedback/claim", {"machine": machine}).get("recording")
+        return recording if isinstance(recording, dict) else None
+
+    def feedback_drive(self, recording_id: str, machine: str, files: list[dict]) -> dict:
+        """Drive upload sessions for a claimed feedback video's stills and feedback file, in its own folder
+        (content-engine api/ux-feedback/drive.ts)."""
+        return self._post("/api/ux-feedback/drive", {"id": recording_id, "machine": machine, "files": files})
+
+    def feedback_report(self, recording_id: str, machine: str, status: str, **fields) -> dict:
+        """Done (the engine then emails Krish the Claude Code prompt) or failed, by class
+        (content-engine api/ux-feedback/report.ts)."""
+        body = {"id": recording_id, "machine": machine, "status": status}
+        body.update({key: value for key, value in fields.items() if value is not None})
+        return self._post("/api/ux-feedback/report", body)
+
 
 def put_upload(url: str, path, mime: str, *, timeout: float = 600, opener=None) -> dict:
     """Send a file's bytes to the Drive upload session the engine opened. Google answers the new file's name, size

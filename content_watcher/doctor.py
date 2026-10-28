@@ -124,8 +124,16 @@ def checks(config: Config) -> list[dict]:
         exists = bool(value) and Path(value).is_dir()
         add(f"folder {label}", exists, value or f"not set: content-watch config {flag} <synced path>",
             "filing and reading hand-dropped files", config.filing == "drive")
+    root = config.my_drive_root()
+    found = bool(root) and (root / "Ventures").is_dir()
+    add("drive root", found, (str(root) + ("" if found else " (no Ventures folder there)")) if root else
+        "not set: content-watch config --drive-root <synced My Drive>", "feedback videos linked in Control Center")
     add("state", True, str(state_dir()), "local log, readings and state")
     add("browser user agent", True, BROWSER_UA, "TikTok and LinkedIn page reads")
+    timeline_missing = [name for name, ok in (("faster-whisper", bool(whisper)), ("numpy", bool(numpy)),
+                                              ("tesseract", bool(tesseract)), ("opencv", has_cascade)) if not ok]
+    add("timeline", not timeline_missing, "full" if not timeline_missing else "without " + ", ".join(timeline_missing),
+        "stills with what was said and shown at each (content-watch timeline, and every video reading)")
     add("engine_rev", True, ENGINE_REV, "the reading format")
     return rows
 
