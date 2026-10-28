@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import json
+import os
 import socket
 import time
 import urllib.error
@@ -32,6 +35,35 @@ ACTORS = {
     # returned all 16 slides. About $0.0004 a request.
     "instagram_downloader": ("snapinsta~instagram-downloader-api", 0.002),
 }
+
+# The cloud backup has no Apify key: with CONTENT_WATCH_APIFY_VIA_ENGINE=1 each run goes through the engine, which holds
+# the key and runs the actor for the request this machine holds (content-engine api/watch/apify.ts). The request is
+# known only inside watch.handle_request, which sets it here; the spend cap and ledger still apply on this machine.
+_ENGINE_RUN: contextvars.ContextVar = contextvars.ContextVar("content_watch_engine_run", default=None)
+
+
+def via_engine() -> bool:
+    return os.environ.get("CONTENT_WATCH_APIFY_VIA_ENGINE") == "1" and _ENGINE_RUN.get() is not None
+
+
+@contextlib.contextmanager
+def engine_runs(engine, request_id: str, machine: str):
+    token = _ENGINE_RUN.set((engine, request_id, machine))
+    try:
+        yield
+    finally:
+        _ENGINE_RUN.reset(token)
+
+
+def _run_via_engine(actor: str, payload: dict) -> list[dict]:
+    from ..engine import EngineError  # imported here: engine.py does not import this module
+
+    engine, request_id, machine = _ENGINE_RUN.get()
+    try:
+        return engine.apify(request_id, machine, actor, payload)
+    except EngineError as failure:
+        raise FetchFailed("blocked", f"apify_via_{failure.status_class}"[:60]) from None
+
 
 MIME_EXT = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4",
             "video/quicktime": ".mov"}
@@ -67,11 +99,13 @@ def allowed(config: Config, estimate: float) -> None:
         raise FetchFailed("blocked", "spend_not_approved")
     if month_spend() + estimate > config.apify_monthly_cap_usd:
         raise FetchFailed("blocked", "spend_cap_reached")
-    if not secrets.apify_token():
+    if not secrets.apify_token() and not via_engine():
         raise FetchFailed("blocked", "no_apify_token")
 
 
 def run_actor(actor: str, payload: dict, *, timeout: float = 300, opener=None) -> list[dict]:
+    if via_engine():
+        return _run_via_engine(actor, payload)
     token = secrets.apify_token()
     request = urllib.request.Request(
         f"{API}/acts/{actor}/run-sync-get-dataset-items?timeout={int(timeout - 20)}",
@@ -122,6 +156,8 @@ def run_actor_async(actor: str, payload: dict, *, timeout: float = 900, poll_eve
                     sleep=time.sleep, clock=time.monotonic) -> list[dict]:
     """Start a run, poll it, then read its dataset: a run with downloads can pass the 300-second limit of the
     synchronous call (FETCH_METHODS.md, TikTok step 4)."""
+    if via_engine():
+        return _run_via_engine(actor, payload)
     token = secrets.apify_token()
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
     opener = opener or urllib.request.build_opener()

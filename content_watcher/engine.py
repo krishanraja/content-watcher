@@ -58,7 +58,7 @@ class Engine:
         self.timeout = timeout
         self.opener = opener or _opener()
 
-    def _post(self, path: str, body: dict) -> dict:
+    def _post(self, path: str, body: dict, *, timeout: float | None = None) -> dict:
         if not self.token:
             raise EngineError("no_engine_key")
         request = urllib.request.Request(
@@ -68,7 +68,7 @@ class Engine:
             method="POST",
         )
         try:
-            with self.opener.open(request, timeout=self.timeout) as response:
+            with self.opener.open(request, timeout=timeout or self.timeout) as response:
                 raw = response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
             exc.close()
@@ -92,6 +92,14 @@ class Engine:
 
     def read(self, machine: str, reads: list[dict]) -> dict:
         return self._post("/api/watch/read", {"machine": machine, "reads": reads})
+
+    def apify(self, request_id: str, machine: str, actor: str, payload: dict) -> list[dict]:
+        """The cloud backup's paid step: the engine runs the actor with its own key, for this machine's claimed
+        request only (content-engine api/watch/apify.ts), and answers the dataset's first items."""
+        answer = self._post("/api/watch/apify", {"id": request_id, "machine": machine, "actor": actor,
+                                                 "input": payload}, timeout=300)
+        items = answer.get("items")
+        return items if isinstance(items, list) else []
 
     def upload(self, request_id: str, machine: str, *, folder: str, name: str, sha256: str, size: int, mime: str) -> dict:
         """The cloud backup's filing: the engine opens a Drive upload session in the lane's folder, as Krish, or says

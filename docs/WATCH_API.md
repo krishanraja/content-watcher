@@ -43,6 +43,9 @@ Krish, 2026-10-28: "yes build the cloud backup". The same package runs on GitHub
   Krish in that folder under the first free name and answers `{ "exists": false, "name", "upload_url" }`. The machine
   `PUT`s the bytes to `upload_url` with no key, and Google answers the new file's `sha256Checksum`; a different hash
   fails the request as a filing error. Add only, as on the home computers (`filing.py`).
+- `POST /api/watch/apify` with `{ "id", "machine", "actor", "input" }`, only from a `cloud` machine holding the
+  request's claim: the engine runs one of this package's own Apify actors with its own key, on an input that names
+  that post, under a hard charge cap, and answers `{ "items" }` (at most 5). Used when `CONTENT_WATCH_APIFY_VIA_ENGINE=1`.
 - `GET /api/watch/upload`: whether the engine can add a file to each folder, and the scope it would use
   (`drive.file`, then `drive`) or Google's reason for each refusal. It writes nothing.
 

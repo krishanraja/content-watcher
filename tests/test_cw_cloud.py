@@ -160,5 +160,64 @@ class CloudFilingTests(unittest.TestCase):
         self.assertEqual(refused.exception.status_class, "engine_http_503")
 
 
+class ApifyThroughTheEngineTests(unittest.TestCase):
+    """The cloud backup holds no Apify key: each paid run goes through the engine for the request it holds."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.env = mock.patch.dict(os.environ, {"CONTENT_WATCH_HOME": str(self.root / "home"),
+                                                "CONTENT_WATCH_APIFY_VIA_ENGINE": "1"})
+        self.env.start()
+        os.environ.pop("APIFY_TOKEN", None)
+        self.config = Config(filing="engine", machine="cloud-gh", apify_enabled=True, apify_monthly_cap_usd=2.0)
+
+    def tearDown(self):
+        self.env.stop()
+        self.temp.cleanup()
+
+    def test_a_paid_step_runs_through_the_engine_for_the_claimed_request(self):
+        from content_watcher.fetch import apify
+        from tests.cw_helpers import FakeOpener
+
+        class Engine_:
+            calls = []
+
+            def apify(self, request_id, machine, actor, payload):
+                self.calls.append((request_id, machine, actor, payload))
+                return [{"status": True, "media": [{"url": "https://cdn.example/a.heic?x", "fileType": "image/jpeg"}]}]
+
+        engine = Engine_()
+        opener = FakeOpener({"https://cdn.example/a.heic": b"slide"})
+        with apify.engine_runs(engine, "req-9", "cloud-gh"):
+            post = apify.fetch_instagram_downloader("https://www.instagram.com/p/PxY/", "PxY", self.root, self.config,
+                                                    opener=opener)
+        self.assertEqual(engine.calls, [("req-9", "cloud-gh", "snapinsta~instagram-downloader-api",
+                                         {"url": "https://www.instagram.com/p/PxY/"})])
+        self.assertEqual(post.media[0].name, "instagram_PxY.jpg")
+        self.assertEqual(opener.calls[0][0], "https://cdn.example/a.heic?x")  # no call to Apify itself
+        self.assertAlmostEqual(apify.month_spend(), 0.002)
+
+    def test_outside_a_claimed_request_there_is_no_paid_run(self):
+        from content_watcher.fetch import apify
+        from content_watcher.fetch.base import FetchFailed
+
+        with self.assertRaises(FetchFailed) as failure:
+            apify.fetch_instagram_downloader("https://www.instagram.com/p/PxY/", "PxY", self.root, self.config)
+        self.assertEqual(failure.exception.detail, "no_apify_token")
+
+    def test_an_engine_that_refuses_the_run_is_a_class(self):
+        from content_watcher.fetch import apify
+        from content_watcher.fetch.base import FetchFailed
+
+        class Refusing:
+            def apify(self, *args):
+                raise EngineError("engine_http_502")
+
+        with apify.engine_runs(Refusing(), "req-9", "cloud-gh"), self.assertRaises(FetchFailed) as failure:
+            apify.fetch_instagram_downloader("https://www.instagram.com/p/PxY/", "PxY", self.root, self.config)
+        self.assertEqual((failure.exception.status_class, failure.exception.detail), ("blocked", "apify_via_engine_http_502"))
+
+
 if __name__ == "__main__":
     unittest.main()
