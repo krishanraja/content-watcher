@@ -186,6 +186,21 @@ class WatchOnceTests(unittest.TestCase):
         # The filed clip is now known, so the drop scan does not read it a second time.
         self.assertNotIn("drop.read", counts)
 
+    def test_a_second_try_reuses_the_file_the_first_filed(self):
+        filed = {"name": "instagram_DAbC.mp4", "sha256": "e" * 64, "mime": "video/mp4", "bytes": 9,
+                 "folder": "video_inspiration"}
+        stub = StubEngine([{"id": "req-3", "url": "https://www.instagram.com/reel/DAbC/", "lane": None,
+                            "media": [filed]}])
+        try:
+            with mock.patch.object(watch, "fetch", side_effect=self.fake_fetch):
+                counts = watch.watch_once(self.config, Engine(stub.url))
+        finally:
+            stub.close()
+        self.assertEqual(counts["read"], 1)
+        self.assertEqual(list(self.videos.iterdir()), [])  # nothing copied a second time
+        self.assertEqual(stub.calls[1][1]["media"], [filed])
+        self.assertEqual(stub.calls[2][1]["reads"][0]["sha256"], "e" * 64)
+
     def test_a_failed_fetch_reports_its_class(self):
         stub = StubEngine([{"id": "req-2", "url": "https://www.instagram.com/reel/gone/", "lane": None}])
         failed = FetchResult(None, [Attempt("ytdlp", "not_found:not_found")], "not_found", "not_found")

@@ -19,6 +19,7 @@ from .fetch import fetch
 from .filing import FOLDERS, FilingError, file_post
 from .post import Post, kind_of, mime_of
 from .read.reader import read_path, read_post
+from .read.render import render_md
 from .state import State, run_lock
 
 DROP_LIMIT = 3  # hand-dropped files read per run, so a run stays short
@@ -99,10 +100,12 @@ def handle_request(request: dict, config: Config, engine: Engine, state: State, 
         return
     post: Post = result.post
     shape = post.infer_shape()
+    remap: dict[str, str] = {}
     heartbeat("file")
     try:
         upload = engine_uploader(engine, request_id, config.machine) if config.filing == "engine" else None
-        media = file_post(post, config, request.get("lane"), upload)
+        prior = {m["name"]: m for m in request.get("media") or [] if isinstance(m, dict) and m.get("name")}
+        media = file_post(post, config, request.get("lane"), upload, prior=prior, remap=remap)
     except FilingError as failure:
         engine.report(request_id, config.machine, "failed", status_class="other", shape=shape)
         counts[f"failed.filing.{failure.status_class}"] += 1
@@ -112,6 +115,8 @@ def handle_request(request: dict, config: Config, engine: Engine, state: State, 
     heartbeat("read")
     readings = read_post(post.media[0].parent, out=state_dir() / "readings" / request_id,
                          whisper_model=config.whisper_model)
+    for reading in readings:
+        as_filed(reading, remap)
     rows = [reading.contract_row() for reading in readings]
     engine.report(request_id, config.machine, "read", shape=shape, media=media, reads=rows)
     for reading in readings:
@@ -119,6 +124,26 @@ def handle_request(request: dict, config: Config, engine: Engine, state: State, 
         counts[f"heard.{reading.read.get('heard')}"] += 1
     counts["read"] += 1
     shutil.rmtree(work, ignore_errors=True)
+
+
+def _swap(value, remap: dict):
+    if isinstance(value, str):
+        return remap.get(value, value)
+    if isinstance(value, list):
+        return [_swap(item, remap) for item in value]
+    if isinstance(value, dict):
+        return {key: _swap(item, remap) for key, item in value.items()}
+    return value
+
+
+def as_filed(reading, remap: dict) -> None:
+    """A reading of re-fetched bytes stands for the file already filed under the same name: it takes that file's
+    hash, everywhere it names one, so its card and its reading stay one."""
+    if not remap:
+        return
+    reading.sha256 = remap.get(reading.sha256, reading.sha256)
+    reading.read = _swap(reading.read, remap)
+    reading.read_md = render_md(reading.read)
 
 
 def drop_candidates(config: Config, state: State, limit: int = DROP_LIMIT) -> list[tuple[Path, str, str]]:
