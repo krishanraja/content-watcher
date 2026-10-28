@@ -2,7 +2,7 @@
 repo: krishanraja/content-watcher
 product: Content Watcher
 as_of: 2026-10-28
-head: 622001d
+head: 2348567
 lifecycle: beta
 production_url: none
 state_doc: README.md
@@ -57,7 +57,8 @@ Lifecycle: beta. Content Watcher is built, merged and installed on both home com
 
 - **D1 answered** (2026-10-24, "Yes to Drive filing"): fetched media files into his two Drive folders. **D2 answered** ("Apify with $5 cap"). Both are in `docs/DECISIONS.md`.
 - **Waiting on Krish: D3**, the North Star for the renamed repository. `docs/NORTH_STAR.md` still holds the compression-only wording and number (set 2026-10-18, metric added 2026-10-23, both before the rename); no answer to D3 is in the record. The proposed wording is in `docs/BRIEF.md` section 3. Only Krish changes the North Star.
-- **Next action: prove it on both home computers**: each on this head with no `drop.read` of linked media, a dropped file read once, and a pasted Instagram link through to its card. Surface reported `session.instagram.none` at 07:25 UTC (no Firefox signed in to Instagram there); the paid downloader through the engine covers it.
+- **Proved live on 28 October (this head, `2348567`):** on Surface a pasted Instagram reel, queued again at 08:27:43 UTC, was claimed, fetched, read with its words and reported by 08:29:09, with its one filed copy reused and nothing added to Drive. The YouTube file Krish shared, dropped in Content Inspo at 08:27:29, was read at 08:31:09 (140 s, words heard, 8 shots). Both computers run this head; neither holds a Firefox Instagram session (`session.instagram.none`), so an age-restricted post goes to the paid downloader, through the engine when a machine has no key of its own. content-engine's recordings pass now runs every console task of his with no window (Lorimer 7 of 7; Surface 4, with 3 installed with admin rights waiting on one admin run).
+- **Next action:** the first dropped file read on one computer and then skipped on the other (`drop.held` in its counts), which proves the engine's held check from both ends.
 - Checkpoint still open (brief section 10 step 2): read one real saved video from his Inspiration folder and compare its `read.md` token count with the taste ledger's eight 512px frames. Needs the home computer or his go-ahead to read one Drive file.
 - Measure the North Star number and record it on the first line under "Where it is right now".
 - North Star check (2026-10-28): recalibration proposed. The North Star still names only the compression engine, and this repository now also holds Content Watcher (D3 in `docs/DECISIONS.md`; the wording proposed to Krish is in `docs/BRIEF.md` section 3).
