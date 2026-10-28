@@ -1,6 +1,6 @@
 # The reading format
 
-Status: Current. Format `content-watcher.read/1`, engine revision `cw-2026.10.24` (`content_watcher/__init__.py`).
+Status: Current. Format `content-watcher.read/1`, engine revision `cw-2026.10.29` (`content_watcher/__init__.py`).
 
 A reading is one piece of media turned into text on Krish's machine, with no model watching it. Each one is written as
 two files and stored as one `content_reads` row, keyed by the sha256 of the file's exact bytes as filed:
@@ -60,8 +60,50 @@ is tagged from the first file. A TikTok photo post's sound is transcribed into t
 `text`: `body`, `word_count`, `paragraphs`, `first_line`, `list_lines`, `hashtags`. A LinkedIn post is filed as a
 Markdown file whose header lines (`Author:`, `Posted:`, `Link:`, `Platform:`) fill `post`.
 
+## The timeline (every video, from engine revision `cw-2026.10.29`)
+
+Krish, 2026-10-28: turning a video into easily understood structured data is a core benefit of Content Watcher for
+inspirationhouse, and every reel the watcher reads should get it. So every video reading carries `timeline`: stills
+taken at the moments that matter, each with what was said and shown then, and tags. It is additive (the promised
+fields are unchanged) and it can never fail a reading: if it errors, or runs past its budget (240 s, or
+`CONTENT_WATCH_TIMELINE_BUDGET`), the reading goes out as before with `timeline` in `unmeasured`. In `read.md` it is
+the `## Timeline` section, one line a still, before the full transcript. The still images stay on the machine in
+`stills/` beside `read.json`; only this text and JSON reach the engine. Code: `content_watcher/timeline/`.
+
+| Field | Meaning |
+|---|---|
+| `format` | `content-watcher.timeline/1` |
+| `profile`, `profile_reason` | `social` for a reading. `ux` (a narrated screen recording) is for `content-watch timeline` on its own. |
+| `words` | `source` (`whisper`, `captions`, or `captions+whisper` when both exist: the captions' text with the transcription's word timings), `language`, `captions`, `whisper`, and `agreement` (word overlap of the two, 0 to 1). |
+| `counts` | `stills`, `images` (pictures taken; a still over an unchanged screen reuses the picture before it), `by_trigger`. |
+| `lexicon` | The version of the UX signal rules (`ux-1`). |
+| `post_tags` | `platform:`, `author:` and each `hashtag:` of the post. |
+| `ux_signals` | Each `friction`, `confusion`, `expectation` or `delight` term heard, once: `t`, `index` (the still), `term`, `said` (its sentence). |
+| `entries` | One per still, in time order (below). |
+
+A still (`entries[]`): `index`, `t`, `triggers` (why it was taken: `start`, `cut`, `screen_change`, `caption_change`,
+`speech`), `shot`, `file` (`stills/...jpg`), `still_sha256`, `dhash` (a 64-bit picture hash), `same_as` (when the
+picture is an earlier still's), `said` (the words within 2 s either side), `words` (those words with their times),
+`sentence` (the sentence being spoken), `screen_text` (OCR of the picture), `colours`, `face` (`on`, `framing`),
+`layout`, `change_score` (the share of the picture that changed), `motion` (`scroll`, or the shot's camera move),
+`ux_signals`, and `tags`.
+
+Moments: the opening; just after each cut; each time the picture changes and settles; each time the words on screen
+change (OCR about twice a second, skipping repeated frames, a word misread by a letter counting as the same); and
+each spoken sentence. Moments closer than 1.5 s merge and keep every trigger; at most 40 in a reading.
+
+Tags, all rules over what was measured: `trigger:*`, `hook` (first 3 s), `layout:*`, `face:*`, `framing:*`,
+`change:large|small` (15% of the picture), `motion:*`, `speech:yes|none`, `ux_signal:*`.
+
 ## What is not measured, honestly
 
 - Music versus speech is not classified; `sound_without_words_share` is the hint.
 - Layout labels are simple rules over OCR and face detection, not a picture model. A chart is not recognised.
 - Words on screen come from sampled frames, so a caption shown for less than the gap between samples can be missed.
+- Timeline tags are rules, not a picture model: a still is not described in words beyond its OCR, colours, faces
+  and layout labels. UX signals are a small word list (`content_watcher/timeline/tags.py`), so sarcasm or a
+  problem described without its words is missed.
+- OCR reads dark text on light backgrounds best: light text on a coloured button, or a caption over a busy moving
+  picture, can be missed.
+- A scroll is named only when it moves less than a quarter of the screen between samples; a long jump reads as a
+  screen change.

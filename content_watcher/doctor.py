@@ -126,6 +126,10 @@ def checks(config: Config) -> list[dict]:
             "filing and reading hand-dropped files", config.filing == "drive")
     add("state", True, str(state_dir()), "local log, readings and state")
     add("browser user agent", True, BROWSER_UA, "TikTok and LinkedIn page reads")
+    timeline_missing = [name for name, ok in (("faster-whisper", bool(whisper)), ("numpy", bool(numpy)),
+                                              ("tesseract", bool(tesseract)), ("opencv", has_cascade)) if not ok]
+    add("timeline", not timeline_missing, "full" if not timeline_missing else "without " + ", ".join(timeline_missing),
+        "stills with what was said and shown at each (content-watch timeline, and every video reading)")
     add("engine_rev", True, ENGINE_REV, "the reading format")
     return rows
 

@@ -38,6 +38,22 @@ def _read(args: argparse.Namespace) -> int:
     return 0
 
 
+def _timeline(args: argparse.Namespace) -> int:
+    """A timeline of one file on its own: written only to --out, never filed, reported or uploaded."""
+    from .timeline import build_standalone
+
+    folder, built = build_standalone(
+        Path(args.path).expanduser().resolve(), Path(args.out).expanduser().resolve(), profile=args.profile,
+        whisper_model=args.whisper or Config.load().whisper_model, max_stills=args.max,
+    )
+    data = built.data
+    print(f"{data['counts']['stills']} stills ({data['counts']['images']} pictures), profile {data['profile']}, "
+          f"{len(data['ux_signals'])} UX signals")
+    print(f"  {folder / 'timeline.md'}")
+    print(f"  {folder / 'stills'}")
+    return 0
+
+
 def _watch(args: argparse.Namespace) -> int:
     from .watch import watch_once
 
@@ -89,6 +105,16 @@ def build_parser() -> argparse.ArgumentParser:
     read.add_argument("--out", default="readings")
     read.add_argument("--whisper", help="faster-whisper model size (default from config, small)")
     read.set_defaults(func=_read)
+
+    timeline = sub.add_parser("timeline", help="a video as timestamped stills with what was said and shown at each "
+                              "(local only: nothing is filed, reported or uploaded)")
+    timeline.add_argument("path")
+    timeline.add_argument("--out", default="timelines")
+    timeline.add_argument("--profile", choices=("auto", "ux", "social"), default="auto",
+                          help="ux for a narrated screen recording, social for a reel (default: decide from the video)")
+    timeline.add_argument("--max", type=int, help="most stills to keep (default 120 for ux, 40 for social)")
+    timeline.add_argument("--whisper", help="faster-whisper model size (default from config, small)")
+    timeline.set_defaults(func=_timeline)
 
     watch = sub.add_parser("watch", help="one run of the queue and the drop folders")
     watch.add_argument("--once", action="store_true", required=True)

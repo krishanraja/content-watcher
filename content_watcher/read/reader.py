@@ -29,6 +29,7 @@ class Reading:
     read_md: str
     frames: list[Path] = field(default_factory=list)
     folder: Path | None = None
+    stills: list[Path] = field(default_factory=list)
 
     def contract_row(self) -> dict:
         """What content_reads stores."""
@@ -53,6 +54,15 @@ class Reading:
                 shutil.copy2(frame, target)
             moved.append(target)
         self.frames = moved
+        if self.stills:
+            (folder / "stills").mkdir(exist_ok=True)
+            kept = []
+            for still in self.stills:
+                target = folder / "stills" / still.name
+                if still.resolve() != target.resolve():
+                    shutil.copy2(still, target)
+                kept.append(target)
+            self.stills = kept
         self.folder = folder
         return folder
 
@@ -205,8 +215,23 @@ def read_video(path: Path, *, post: Post | None = None, captions: Path | None = 
             chosen.append({"role": "most_text", "t": round(text["most_text_time"], 2), "file": most.name})
     data["frames"] = chosen
     frame_paths = [work / item["file"] for item in chosen]
+
+    # The timeline: stills at each moment with what was said and shown. It can never fail or hold up the reading.
+    stills: list[Path] = []
+    try:
+        from ..timeline import timeline
+
+        built = timeline(
+            path, profile="social", duration=duration, heard=heard, cuts=cut_times, spans=spans, frames=frames,
+            workdir=work / f"{sha[:12]}_stills", face_samples=samples if data["faces"].get("available") else None,
+            camera_moves=data["camera_moves"], post=data["post"], captions=captions, has_audio=info.has_audio,
+            whisper_model=whisper_model, profile_reason="every video reading carries a social timeline",
+        )
+        data["timeline"], stills = built.data, built.stills
+    except Exception:  # noqa: BLE001 - a timeline is extra; the reading goes out as before without it
+        data["unmeasured"].append("timeline")
     return Reading(sha, "video", post.platform if post else "own", post.url if post else None,
-                   data, render_md(data), frame_paths)
+                   data, render_md(data), frame_paths, stills=stills)
 
 
 def _face_in(face_data: dict, samples: list, start: float, end: float):

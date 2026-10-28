@@ -173,6 +173,10 @@ def render_md(data: dict) -> str:
         lines += _text(data)
     if "document" in data:
         lines += _document(data)
+    if data.get("timeline"):
+        from ..timeline.render import timeline_lines
+
+        lines += timeline_lines(data["timeline"])
     lines += _words(data)
     if data.get("frames"):
         lines += ["", "## Frames kept beside this reading"]

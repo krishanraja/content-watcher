@@ -18,6 +18,8 @@ This repository's North Star is [`docs/NORTH_STAR.md`](docs/NORTH_STAR.md): an a
 
 When a user asks to compress a video, including the phrase "Need to compress a video", use the repository skill at `.agents/skills/video-compression/SKILL.md`.
 
+When Krish hands over a recording of himself giving feedback on a product ("UX feedback", "feedback video"), use the repository skill at `.agents/skills/ux-feedback/SKILL.md`. It runs `content-watch timeline --profile ux` locally and never reaches inspirationhouse, the engine or Drive. Every video the watcher reads also carries a timeline (`docs/READ_FORMAT.md`, "The timeline").
+
 The user-facing workflow is more important than code changes. Do not edit the compression engine (`video_compression/`) unless the user asks to change the engine itself; Krish has asked for `content_watcher/` to be built out. For an ordinary compression request, guide the user in chat, run the local CLI, verify every output, and return clickable absolute paths.
 
 The engine is local-first. Never upload media, delete the source, overwrite an existing output, or download a remote file without the user's applicable authorization. Let the host handle its own file-access approval. Do not repeatedly ask for chat confirmation after the user has supplied the inputs and requested execution.

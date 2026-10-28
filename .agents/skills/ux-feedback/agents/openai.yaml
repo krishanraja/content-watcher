@@ -1,0 +1,7 @@
+interface:
+  display_name: "UX Feedback Recording"
+  short_description: "Turn a narrated screen recording into tagged, timestamped stills locally"
+  default_prompt: "Use $ux-feedback to turn my feedback recording into a timeline of stills with what I said at each."
+
+policy:
+  allow_implicit_invocation: true
