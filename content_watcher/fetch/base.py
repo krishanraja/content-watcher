@@ -12,7 +12,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .. import tools
+from .. import tools, windowless
 from ..urls import BROWSER_UA
 
 # The status classes Control Center puts into words. Keep to these.
@@ -62,10 +62,11 @@ MODULES = {"yt-dlp": "yt_dlp", "gallery-dl": "gallery_dl", "instaloader": "insta
 
 
 def tool_command(name: str) -> list[str]:
-    """Run yt-dlp and gallery-dl through this interpreter, so a stale copy on PATH is never the one that runs."""
+    """Run yt-dlp and gallery-dl through this interpreter, so a stale copy on PATH is never the one that runs. Its
+    console twin, not pythonw.exe, so the programs the tool starts share its hidden console (windowless.py)."""
     module = MODULES.get(name)
     if module and importlib.util.find_spec(module) is not None:
-        return [sys.executable, "-m", module]
+        return [windowless.console_python(), "-m", module]
     found = tools.which(name)  # a stand-alone install, or a test's stand-in
     if not found:
         raise FetchFailed("other", f"no_{name.replace('-', '_')}")
