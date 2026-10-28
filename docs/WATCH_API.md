@@ -12,7 +12,9 @@ Body: `{ "machine": "HOME-PC-1", "limit": 3 }`
 
 Atomically claims up to `limit` requests that are `queued`, or `claimed` more than 30 minutes ago (stale), raising
 `attempts` and setting `claimed_by` and `claimed_at`. Returns `{ "requests": [{ "id", "url", "url_key", "platform",
-"lane", "note", "attempts" }] }`. A request that has failed 3 times is not claimed again until Krish pastes it again.
+"lane", "note", "attempts", "media" }] }`. `media` is what an earlier try of the same request already filed (or null):
+a file of the same name in the same folder is reused rather than filed again, and its reading takes that file's
+hash, because a platform's CDN can hand a second fetch different bytes (2026-10-28). A request that has failed 3 times is not claimed again until Krish pastes it again.
 
 ## `POST /api/watch/report`
 

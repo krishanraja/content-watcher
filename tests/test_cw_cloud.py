@@ -144,6 +144,25 @@ class CloudFilingTests(unittest.TestCase):
         statuses = [call[1]["status"] for call in stub.calls if call[0] == "/api/watch/report"]
         self.assertEqual(statuses, ["failed"])
 
+    def test_a_second_try_reuses_what_the_first_filed_and_reads_as_that_file(self):
+        # 28 October 2026: the CDN handed a second fetch different bytes for the same slide. Filing them again would
+        # add a _v2 copy and a second card; the second try reuses the filed file and its hash instead.
+        filed = {"name": "instagram_PxY_1.jpg", "sha256": "f" * 64, "mime": "image/jpeg", "bytes": 5,
+                 "folder": "cold_ideas"}
+        stub = CloudStub([{"id": "req-9", "url": "https://www.instagram.com/p/PxY/", "lane": "strategy",
+                           "media": [filed]}])
+        try:
+            counts = self.run_once(stub)
+        finally:
+            stub.close()
+        self.assertEqual(counts["read"], 1)
+        self.assertEqual(stub.paths(), ["/api/watch/claim", "/api/watch/report", "/api/watch/report"])  # no upload
+        self.assertEqual(stub.calls[1][1]["media"], [filed])
+        read = stub.calls[2][1]["reads"][0]
+        self.assertEqual(read["sha256"], "f" * 64)
+        self.assertNotIn(tools.sha256_file(self.slide), json.dumps(read))
+        self.assertIn("ffffffffffffffff", read["read_md"])
+
     def test_engine_filing_needs_an_uploader_and_a_refused_upload_is_a_class(self):
         post = Post("instagram", "u", "PxY", "a", media=[self.slide], shape="image")
         with self.assertRaises(FilingError) as missing:
