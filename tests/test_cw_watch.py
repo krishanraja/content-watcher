@@ -172,7 +172,9 @@ class WatchOnceTests(unittest.TestCase):
             stub.close()
         self.assertEqual(counts["claimed"], 1)
         self.assertEqual(counts["read"], 1)
-        self.assertEqual(stub.paths(), ["/api/watch/claim", "/api/watch/report", "/api/watch/report"])
+        # Then the run asks for a feedback video (none here): its own queue, after the Inspiration one.
+        self.assertEqual(stub.paths(), ["/api/watch/claim", "/api/watch/report", "/api/watch/report",
+                                        "/api/ux-feedback/claim"])
         filed = stub.calls[1][1]
         read = stub.calls[2][1]
         self.assertEqual((filed["status"], filed["shape"]), ("filed", "video"))

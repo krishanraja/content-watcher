@@ -33,6 +33,12 @@ recording itself is never moved, changed or deleted.
 - Say plainly that tags are rules over his words and the screen text, not a model's judgement of the screen. Open
   the stills you cite before describing what they show; never describe a still you have not looked at.
 
+## From Control Center
+
+Krish can also add a recording in Control Center's feedback box. A home computer then does the same run on its own
+and the engine emails him the Claude Code prompt with links to the feedback file and the stills in Drive
+(`docs/WATCH_API.md`, "Feedback videos"). This skill is for a recording he hands over in a session instead.
+
 ## Keep it separate
 
 Do not run `content-watch read` or `watch` on a feedback recording, and do not put it in the Production Inspo or

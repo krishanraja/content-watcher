@@ -5,7 +5,7 @@ from __future__ import annotations
 from ..read.render import _clock, _quote
 
 
-def timeline_lines(data: dict, heading: str = "##") -> list[str]:
+def timeline_lines(data: dict, heading: str = "##", links: dict[str, str] | None = None) -> list[str]:
     counts = data["counts"]
     out = ["", f"{heading} Timeline: {counts['stills']} stills ({counts['images']} pictures), {data['profile']} profile"]
     out.append("Each line: time, still, why it was taken, what was said around it, words on screen, tags. "
@@ -27,6 +27,8 @@ def timeline_lines(data: dict, heading: str = "##") -> list[str]:
             bits.append(f"said: \"{_quote(entry['said'], 240)}\"")
         if entry.get("screen_text"):
             bits.append(f"screen: \"{_quote(entry['screen_text'], 160)}\"")
+        if links and links.get(entry.get("file") or ""):
+            bits.append(f"still: {links[entry['file']]}")
         rest = [tag for tag in entry["tags"] if not tag.startswith("trigger:")]
         if rest:
             bits.append("tags: " + " ".join(rest))
@@ -36,15 +38,17 @@ def timeline_lines(data: dict, heading: str = "##") -> list[str]:
     return out
 
 
-def render_timeline_md(data: dict) -> str:
+def render_timeline_md(data: dict, links: dict[str, str] | None = None) -> str:
+    """The timeline as a file; with `links` (a still's file to its Drive link) each line links its picture."""
     source = data.get("source") or {}
     lines = [f"# Timeline: {source.get('file', 'video')}", ""]
     lines.append(f"{data['duration_s']} s, profile {data['profile']} ({data.get('profile_reason') or 'asked for'}).")
     words = data.get("words") or {}
     heard = data.get("heard")
     lines.append(f"Words from {words.get('source', 'none')}" + (f" ({heard['heard_class']})" if heard else "") + ".")
-    lines.append("Stills are in the stills folder beside this file; nothing here was uploaded.")
-    lines += timeline_lines(data)
+    lines.append("Each line links the still of that moment in Drive." if links else
+                 "Stills are in the stills folder beside this file; nothing here was uploaded.")
+    lines += timeline_lines(data, links=links)
     if data.get("sentences"):
         lines += ["", "## Everything that was said"]
         lines += [f"[{_clock(s['start'])}] {s['text']}" for s in data["sentences"]]

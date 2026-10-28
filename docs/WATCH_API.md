@@ -64,6 +64,32 @@ made from a link. The drop reader asks it
 before reading: the folders also hold what the other machine and the cloud filed from links, which they read already
 (`watch.unheld_drops`; 28 October 2026). An engine that cannot answer leaves the files to be read as before.
 
+## Feedback videos (2026-10-28)
+
+Krish, 2026-10-28: "somewhere in my control centre where I can specifically add a feedback video that's not
+inspiration ... It would trigger only this one part of the system", with the result as an email holding "a neat and
+tidy Claude Code prompt" and links to the feedback file and the Drive folder of stills. A queue of its own
+(content-engine migration `20261116090000_ux_feedback_recordings.sql`, `apps/control-plane/api/ux-feedback/`): it
+never touches `content_watch_requests`, `content_reads` or the Inspiration folders. The client is
+`content_watcher/feedback.py`, one recording a run, after the Inspiration queue, on a home computer only and only
+when the run has 12 minutes left; trouble with these routes is counted under `feedback.` and never stops the drop
+reader.
+
+- `POST /api/ux-feedback/claim` with `{ "machine" }`: `{ "recording": { "id", "name", "note", "mime", "bytes",
+  "attempts", "download_url" } }` or `null`. The download URL is signed for an hour and takes no key. A machine whose
+  name starts with `cloud` is refused. A claim is stale after an hour; the third stale claim fails as `timeout`.
+- `POST /api/ux-feedback/drive` with `{ "id", "machine", "files": [{ "name", "mime", "bytes" }] }` (`image/jpeg`
+  stills, `text/markdown` for `feedback.md`): the engine makes the recording's folder `<day> <name>` inside
+  "UX Feedback" once and opens a resumable session per file, as Krish; the machine `PUT`s each file and Google answers
+  its id. Add only.
+- `POST /api/ux-feedback/report` with `{ "id", "machine", "status": "done", "feedback_file_id", "summary" }` or
+  `{ ..., "status": "failed", "status_class" }`. Done sends Krish one email: the links and a Claude Code prompt
+  listing the moments he flagged. Below 3 attempts a failure goes back to the queue.
+
+The machine downloads the recording, runs `content-watch timeline --profile ux` on it, deletes its own copy (the
+recording stays in the private bucket), uploads the stills, then `feedback.md`, whose every line links its still in
+Drive, and reports.
+
 ## Logs
 
 Neither side logs a URL, caption, transcript, file name or reading text. Counts and class names only.

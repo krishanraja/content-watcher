@@ -14,6 +14,7 @@ from pathlib import Path
 from . import ENGINE_REV, session
 from .config import Config, state_dir
 from .engine import Engine, EngineError, put_upload
+from .feedback import feedback_once
 from .fetch import apify as paid
 from .fetch import fetch
 from .filing import FOLDERS, FilingError, file_post
@@ -216,7 +217,7 @@ def watch_once(config: Config | None = None, engine: Engine | None = None, deadl
     timer.daemon = True
     timer.start()
     try:
-        _watch_once(config, engine, counts)
+        _watch_once(config, engine, counts, ends=started + deadline_s)
     except Exception as exc:  # noqa: BLE001 - a run that cannot start still logs, by class
         counts[f"run.error.{type(exc).__name__}"] += 1
     finally:
@@ -251,7 +252,7 @@ def note_sessions(config: Config, counts: Counter, now: float | None = None) -> 
         pass
 
 
-def _watch_once(config: Config | None, engine: Engine | None, counts: Counter) -> None:
+def _watch_once(config: Config | None, engine: Engine | None, counts: Counter, ends: float | None = None) -> None:
     config = config or Config.load()
     with run_lock() as got:
         if not got:
@@ -279,6 +280,10 @@ def _watch_once(config: Config | None, engine: Engine | None, counts: Counter) -
                         engine.report(str(request["id"]), config.machine, "failed", status_class="other")
                     except EngineError:
                         pass
+            # A feedback video he added in Control Center: its own queue, never the Inspiration one (feedback.py).
+            heartbeat("feedback")
+            feedback_once(config, engine, counts,
+                          time_left_s=(ends - time.monotonic()) if ends is not None else RUN_DEADLINE_S)
             # Dropped files only when the engine answered: their readings have nowhere to go otherwise.
             if not any(key.startswith("engine.") for key in counts):
                 heartbeat("drops")
