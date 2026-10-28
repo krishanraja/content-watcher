@@ -29,6 +29,9 @@ class FetchResult:
     detail: str | None = None
 
 
+SESSION_STEP_S = 180  # the signed-in step; a ten-slide carousel takes well under a minute
+
+
 def _methods(link: urls.PostLink, config: Config) -> list[tuple[str, Callable[[Path], Post]]]:
     """Each platform's chain, free first: the open tools, then free sites, then Apify under Krish's $5 monthly cap,
     then words alone when no file can be had. Order from docs/FETCH_METHODS.md, plus the free sites Krish asked for
@@ -54,8 +57,11 @@ def _methods(link: urls.PostLink, config: Config) -> list[tuple[str, Callable[[P
         cobalt_step()
         # His own signed-in session, free, before anything paid: it sees what only a signed-in account sees, such as
         # an age-restricted post (Krish, 2026-10-28: "You need to get the local runner for working as well as Apify").
+        # Never a step that can hold the run: a session that has lapsed or a Firefox that holds its store gives way to
+        # the paid steps after SESSION_STEP_S, so his session is a free shortcut and never a dependency.
         if cookies:
-            chain.append(("gallerydl_cookies", lambda f: gallerydl.fetch(url, platform, f, cookies_profile=cookies)))
+            chain.append(("gallerydl_cookies", lambda f: gallerydl.fetch(url, platform, f, cookies_profile=cookies,
+                                                                       timeout=SESSION_STEP_S)))
         actor = "instagram_reel" if link.kind == "reel" else "instagram_post"
         chain.append((f"apify_{actor}", lambda f: apify.fetch(url, platform, f, config, actor_key=actor, expected_id=post_id)))
         # Age-restricted posts: every logged-out scraper is refused, this downloader is not (28 October 2026).

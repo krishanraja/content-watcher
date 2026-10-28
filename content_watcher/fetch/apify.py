@@ -36,14 +36,24 @@ ACTORS = {
     "instagram_downloader": ("snapinsta~instagram-downloader-api", 0.002),
 }
 
-# The cloud backup has no Apify key: with CONTENT_WATCH_APIFY_VIA_ENGINE=1 each run goes through the engine, which holds
-# the key and runs the actor for the request this machine holds (content-engine api/watch/apify.ts). The request is
-# known only inside watch.handle_request, which sets it here; the spend cap and ledger still apply on this machine.
+# The engine holds the one Apify key and runs an actor for the request a machine holds (content-engine
+# api/watch/apify.ts). The cloud backup always goes through it (CONTENT_WATCH_APIFY_VIA_ENGINE=1); a home computer does
+# whenever it has no key of its own or its key is refused, so a key missing from or expired on a machine never stops a
+# fetch (Krish, 2026-10-28: "Keys from sessions are fragile, you should by now have a more robust way of not failing at
+# that step!"). The request is known only inside watch.handle_request, which sets it here; the spend cap and ledger
+# still apply on this machine.
 _ENGINE_RUN: contextvars.ContextVar = contextvars.ContextVar("content_watch_engine_run", default=None)
 
 
 def via_engine() -> bool:
-    return os.environ.get("CONTENT_WATCH_APIFY_VIA_ENGINE") == "1" and _ENGINE_RUN.get() is not None
+    if _ENGINE_RUN.get() is None:
+        return False
+    return os.environ.get("CONTENT_WATCH_APIFY_VIA_ENGINE") == "1" or not secrets.apify_token()
+
+
+def _refused_here(failure: FetchFailed) -> bool:
+    """This machine's own key was refused and the engine can run the actor instead."""
+    return failure.detail == "apify_refused" and _ENGINE_RUN.get() is not None
 
 
 @contextlib.contextmanager
@@ -106,6 +116,15 @@ def allowed(config: Config, estimate: float) -> None:
 def run_actor(actor: str, payload: dict, *, timeout: float = 300, opener=None) -> list[dict]:
     if via_engine():
         return _run_via_engine(actor, payload)
+    try:
+        return _run_actor_here(actor, payload, timeout=timeout, opener=opener)
+    except FetchFailed as failure:
+        if _refused_here(failure):
+            return _run_via_engine(actor, payload)
+        raise
+
+
+def _run_actor_here(actor: str, payload: dict, *, timeout: float, opener) -> list[dict]:
     token = secrets.apify_token()
     request = urllib.request.Request(
         f"{API}/acts/{actor}/run-sync-get-dataset-items?timeout={int(timeout - 20)}",
@@ -158,6 +177,17 @@ def run_actor_async(actor: str, payload: dict, *, timeout: float = 900, poll_eve
     synchronous call (FETCH_METHODS.md, TikTok step 4)."""
     if via_engine():
         return _run_via_engine(actor, payload)
+    try:
+        return _run_actor_async_here(actor, payload, timeout=timeout, poll_every=poll_every, opener=opener,
+                                     sleep=sleep, clock=clock)
+    except FetchFailed as failure:
+        if _refused_here(failure):
+            return _run_via_engine(actor, payload)
+        raise
+
+
+def _run_actor_async_here(actor: str, payload: dict, *, timeout: float, poll_every: float, opener, sleep,
+                          clock) -> list[dict]:
     token = secrets.apify_token()
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
     opener = opener or urllib.request.build_opener()

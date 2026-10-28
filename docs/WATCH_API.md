@@ -47,7 +47,8 @@ Krish, 2026-10-28: "yes build the cloud backup". The same package runs on GitHub
   fails the request as a filing error. Add only, as on the home computers (`filing.py`).
 - `POST /api/watch/apify` with `{ "id", "machine", "actor", "input" }`, only from a `cloud` machine holding the
   request's claim: the engine runs one of this package's own Apify actors with its own key, on an input that names
-  that post, under a hard charge cap, and answers `{ "items" }` (at most 5). Used when `CONTENT_WATCH_APIFY_VIA_ENGINE=1`.
+  that post, under a hard charge cap, and answers `{ "items" }` (at most 5). Used when `CONTENT_WATCH_APIFY_VIA_ENGINE=1`, and on a home computer whenever it has no Apify key of its
+  own or its key is refused, so no machine needs a key (`apify.via_engine`).
 - `GET /api/watch/upload`: whether the engine can add a file to each folder, and the scope it would use
   (`drive.file`, then `drive`) or Google's reason for each refusal. It writes nothing.
 
@@ -56,6 +57,11 @@ Krish, 2026-10-28: "yes build the cloud backup". The same package runs on GitHub
 Body: `{ "machine", "reads": [row, ...] }`: readings of files Krish dropped by hand, with no request. Same upsert as
 above. Decision (2026-10-24): a separate route rather than folding into `report`, because a drop has no request id
 and the report route's job is moving one request through its states.
+
+The same route with `{ "machine", "check": [sha256, ...] }` (at most 50) writes nothing and answers
+`{ "held": { sha256: engine_rev } }` for the media the engine already holds a reading of. The drop reader asks it
+before reading: the folders also hold what the other machine and the cloud filed from links, which they read already
+(`watch.unheld_drops`; 28 October 2026). An engine that cannot answer leaves the files to be read as before.
 
 ## Logs
 

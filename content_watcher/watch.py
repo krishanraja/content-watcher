@@ -23,6 +23,10 @@ from .read.render import render_md
 from .state import State, run_lock
 
 DROP_LIMIT = 3  # hand-dropped files read per run, so a run stays short
+# Unread files looked at per run before the engine is asked which it already holds. The folders also hold what the
+# other machine and the cloud filed from links, which they read already: on 28 October 2026 each machine re-read
+# those, nineteen files of whisper, ffmpeg and tesseract work (and a window for each program) with nothing new to say.
+DROP_SCAN = 12
 # The longest a run may live. From 25 and 26 October 2026 both home computers stopped logging at 08:00 and a press of
 # Run did nothing: a run that never ends holds the scheduled task, which ignores new starts while one is running. A
 # run past this logs where it was (stage.<name>), frees the lock and ends, so the next minute's run starts clean.
@@ -166,8 +170,35 @@ def drop_candidates(config: Config, state: State, limit: int = DROP_LIMIT) -> li
     return found
 
 
+def _current(rev: str) -> bool:
+    return rev >= ENGINE_REV  # the same "cw-YYYY.MM.DD" shape on both sides
+
+
+def unheld_drops(config: Config, engine: Engine, state: State, counts: Counter,
+                 limit: int = DROP_LIMIT) -> list[tuple[Path, str, str]]:
+    """The unread files the engine holds no current reading of, newest first, up to the limit. Each file it already
+    holds is marked read here and never read again. An engine that cannot say (an older one, a failure) leaves the
+    files to be read as before; its writes keep a reading made from a link in any case."""
+    found = drop_candidates(config, state, DROP_SCAN)
+    if not found:
+        return []
+    try:
+        held = engine.held(config.machine, [sha for _path, sha, _folder in found])
+    except EngineError:
+        counts["drop.held_unknown"] += 1
+        return found[:limit]
+    left = []
+    for path, sha, folder in found:
+        if _current(held.get(sha, "")):
+            state.mark_sent(sha, ENGINE_REV)
+            counts["drop.held"] += 1
+        else:
+            left.append((path, sha, folder))
+    return left[:limit]
+
+
 def read_drops(config: Config, engine: Engine, state: State, counts: Counter, limit: int = DROP_LIMIT) -> None:
-    for path, sha, _folder in drop_candidates(config, state, limit):
+    for path, sha, _folder in unheld_drops(config, engine, state, counts, limit):
         heartbeat("read_drop")
         try:
             readings = read_path(path, out=state_dir() / "readings" / "drops", whisper_model=config.whisper_model)

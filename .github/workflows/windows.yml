@@ -1,0 +1,21 @@
+# The one thing only Windows can show: that a run on a home computer opens no window (Krish, 2026-10-28: "HIDE ALL
+# CONSOLE POP UPS FOREVER FROM EVERY REPO AND LOCAL TASK"). tests/test_cw_windowless.py starts a console program from
+# pythonw.exe, as the scheduled task does, and looks at every window on the desktop while it runs; its control proves
+# the probe can see the window an unpatched run opens.
+name: windows
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  no-window:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest tests.test_cw_windowless -v

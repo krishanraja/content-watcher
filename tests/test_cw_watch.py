@@ -22,8 +22,9 @@ from tests.cw_helpers import FFMPEG, make_image, make_video
 
 
 class StubEngine:
-    def __init__(self, queue):
+    def __init__(self, queue, held=None):
         self.queue = list(queue)
+        self.held = dict(held or {})  # sha -> engine_rev of a reading the engine already holds
         self.calls = []
         stub = self
 
@@ -42,6 +43,8 @@ class StubEngine:
                 if self.path == "/api/watch/claim":
                     answer = {"requests": stub.queue[: body["limit"]]}
                     stub.queue = stub.queue[body["limit"]:]
+                if self.path == "/api/watch/read" and "check" in body:
+                    answer = {"held": {sha: stub.held[sha] for sha in body["check"] if sha in stub.held}}
                 payload = json.dumps(answer).encode()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -224,10 +227,50 @@ class WatchOnceTests(unittest.TestCase):
             stub.close()
         self.assertEqual(first["drop.read"], 2)
         self.assertNotIn("drop.read", second)
-        reads = [body for path, body, _ in stub.calls if path == "/api/watch/read"]
+        reads = [body for path, body, _ in stub.calls if path == "/api/watch/read" and "reads" in body]
         self.assertEqual(len(reads), 2)
         shas = {body["reads"][0]["sha256"] for body in reads}
         self.assertIn(tools.sha256_file(self.videos / "dropped.mp4"), shas)
+
+    def test_a_file_the_engine_already_holds_is_never_read_again(self):
+        # What the other machine filed from a link and read: the engine says so, and this machine does no work on it.
+        shutil.copy(self.clip, self.videos / "instagram_DAbC.mp4")
+        make_image(self.cold / "slide.png", "COLD IDEA")
+        held = {tools.sha256_file(self.videos / "instagram_DAbC.mp4"): watch.ENGINE_REV}
+        stub = StubEngine([], held=held)
+        try:
+            with mock.patch.object(watch, "read_path", wraps=watch.read_path) as reader:
+                first = watch.watch_once(self.config, Engine(stub.url))
+                second = watch.watch_once(self.config, Engine(stub.url))
+        finally:
+            stub.close()
+        self.assertEqual((first["drop.held"], first["drop.read"]), (1, 1))
+        self.assertEqual([call.args[0].name for call in reader.call_args_list], ["slide.png"])
+        self.assertNotIn("drop.read", second)
+        self.assertNotIn("drop.held", second)  # marked read here, so not even asked again
+
+    def test_an_older_reading_or_a_silent_engine_still_reads(self):
+        shutil.copy(self.clip, self.videos / "dropped.mp4")
+        stub = StubEngine([], held={tools.sha256_file(self.videos / "dropped.mp4"): "cw-2026.01.01"})
+        try:
+            counts = watch.watch_once(self.config, Engine(stub.url))
+        finally:
+            stub.close()
+        self.assertEqual(counts["drop.read"], 1)
+
+        make_image(self.cold / "slide.png", "COLD IDEA")
+
+        class Silent(Engine):
+            def held(self, machine, shas):
+                raise EngineError("engine_http_400")  # an engine from before the check
+
+        stub = StubEngine([])
+        try:
+            counts = watch.watch_once(self.config, Silent(stub.url))
+        finally:
+            stub.close()
+        self.assertEqual((counts["drop.held_unknown"], counts["drop.read"]), (1, 1))
+        self.assertFalse(any(key.startswith("engine.") for key in counts))
 
     def test_log_carries_counts_and_classes_only(self):
         stub = StubEngine([{"id": "req-3", "url": "https://www.instagram.com/reel/secret-link/", "lane": None}])

@@ -93,6 +93,11 @@ class Engine:
     def read(self, machine: str, reads: list[dict]) -> dict:
         return self._post("/api/watch/read", {"machine": machine, "reads": reads})
 
+    def held(self, machine: str, shas: list[str]) -> dict[str, str]:
+        """Which of these media the engine already holds a reading of, with that reading's engine_rev."""
+        held = self._post("/api/watch/read", {"machine": machine, "check": shas}).get("held")
+        return {str(sha): str(rev) for sha, rev in held.items()} if isinstance(held, dict) else {}
+
     def apify(self, request_id: str, machine: str, actor: str, payload: dict) -> list[dict]:
         """The cloud backup's paid step: the engine runs the actor with its own key, for this machine's claimed
         request only (content-engine api/watch/apify.ts), and answers the dataset's first items."""
