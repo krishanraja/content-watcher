@@ -27,7 +27,14 @@ ACTORS = {
     "youtube_short_video": ("marielise.dev~youtube-video-downloader", 0.06),
     "linkedin_harvest": ("harvestapi~linkedin-profile-posts", 0.005),
     "linkedin_supreme": ("supreme_coder~linkedin-post", 0.005),
+    # A downloader service that reaches what every logged-out scraper is refused. 28 October 2026: Krish's carousel
+    # (/p/DfAY9PWFuEX) answered Apify's scraper "Restricted access ... The post is age-restricted", and this actor
+    # returned all 16 slides. About $0.0004 a request.
+    "instagram_downloader": ("snapinsta~instagram-downloader-api", 0.002),
 }
+
+MIME_EXT = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4",
+            "video/quicktime": ".mov"}
 
 
 def ledger_path() -> Path:
@@ -317,6 +324,41 @@ def linkedin_parts(item: dict) -> dict:
         "pdf": document.get("transcribedDocumentUrl"),
         "counts": counts,
     }
+
+
+def instagram_downloader_parts(item: dict) -> list[tuple[str, str]]:
+    """The downloader's media URLs in post order, each with the extension its file type names. The URL's own suffix
+    can say .heic while the bytes are JPEG (stp=dst-jpg), so the type decides."""
+    if item.get("status") is not True:
+        _item_error({"error": item.get("error") or item.get("message") or "downloader_failed"})
+    out = []
+    for media in item.get("media") or []:
+        media_url = media.get("url") if isinstance(media, dict) else None
+        if not media_url:
+            continue
+        kind = str(media.get("fileType") or "").lower()
+        out.append((media_url, MIME_EXT.get(kind) or (".mp4" if kind.startswith("video") else ".jpg")))
+    return out
+
+
+def fetch_instagram_downloader(url: str, post_id: str | None, folder: Path, config: Config, *, opener=None) -> Post:
+    """The last paid step for an Instagram post or reel: a downloader that reaches age-restricted posts. It gives the
+    files only, so the reading carries no caption or author."""
+    actor, estimate = ACTORS["instagram_downloader"]
+    allowed(config, estimate)
+    record_spend(estimate)
+    items = run_actor(actor, {"url": url}, opener=opener)
+    if not items:
+        raise FetchFailed("other", "apify_item_error")
+    media = instagram_downloader_parts(items[0])
+    if not media:
+        raise FetchFailed("other", "apify_no_media")
+    ident = post_id or "post"
+    post = Post(platform="instagram", url=url, post_id=ident, method="apify_instagram_downloader")
+    for index, (media_url, ext) in enumerate(media, start=1):
+        suffix = f"_{index:02d}" if len(media) > 1 else ""
+        post.media.append(download(media_url, folder / f"instagram_{ident}{suffix}{ext}", opener=opener))
+    return post
 
 
 def fetch_linkedin(url: str, post_id: str | None, folder: Path, config: Config, *, actor_key: str, opener=None) -> Post:

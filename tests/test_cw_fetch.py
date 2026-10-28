@@ -422,6 +422,37 @@ class ApifyTests(unittest.TestCase):
         self.assertEqual(json.loads(opener.calls[0][1])["quality"], "720p")
         self.assertAlmostEqual(apify.month_spend(), 0.06)
 
+    def test_an_age_restricted_carousel_comes_through_the_downloader_in_slide_order(self):
+        # 28 October 2026: Krish's carousel answered the scraper "The post is age-restricted"; the downloader gave
+        # all 16 slides, each a JPEG under a .heic path.
+        items = [{"status": True, "sourceUrl": "https://www.instagram.com/p/DfAY9PWFuEX/", "media": [
+            {"url": "https://cdn.example/a_n.heic?stp=dst-jpg_e35", "fileType": "image/jpeg"},
+            {"url": "https://cdn.example/b_n.heic?stp=dst-jpg_e35", "fileType": "image/jpeg"},
+            {"url": "https://cdn.example/c.mp4?x=1", "fileType": "video/mp4"},
+        ]}]
+        opener = FakeOpener({
+            "https://api.apify.com/v2/acts/snapinsta~instagram-downloader-api/": json.dumps(items).encode(),
+            "https://cdn.example/a_n.heic": b"one",
+            "https://cdn.example/b_n.heic": b"two",
+            "https://cdn.example/c.mp4": b"three",
+        })
+        config = Config(apify_enabled=True, apify_monthly_cap_usd=5.0)
+        post = apify.fetch_instagram_downloader("https://www.instagram.com/p/DfAY9PWFuEX/", "DfAY9PWFuEX", self.root,
+                                                config, opener=opener)
+        self.assertEqual([p.name for p in post.media],
+                         ["instagram_DfAY9PWFuEX_01.jpg", "instagram_DfAY9PWFuEX_02.jpg", "instagram_DfAY9PWFuEX_03.mp4"])
+        self.assertEqual(post.infer_shape(), "carousel")
+        self.assertEqual(json.loads(opener.calls[0][1]), {"url": "https://www.instagram.com/p/DfAY9PWFuEX/"})
+        self.assertAlmostEqual(apify.month_spend(), 0.002)
+
+    def test_a_downloader_that_says_no_is_a_class(self):
+        opener = FakeOpener({"https://api.apify.com/v2/acts/snapinsta~instagram-downloader-api/":
+                             b'[{"status": false, "error": "This account is private"}]'})
+        config = Config(apify_enabled=True, apify_monthly_cap_usd=5.0)
+        with self.assertRaises(FetchFailed) as failure:
+            apify.fetch_instagram_downloader("https://www.instagram.com/p/x/", "x", self.root, config, opener=opener)
+        self.assertEqual(failure.exception.status_class, "login_wall")
+
     def test_out_of_credit_is_blocked(self):
         opener = FakeOpener({"https://api.apify.com/": 402})
         config = Config(apify_enabled=True, apify_monthly_cap_usd=5.0)
@@ -466,6 +497,7 @@ class ChainTests(unittest.TestCase):
                 mock.patch.object(ytdlp, "fetch_carousel", side_effect=FetchFailed("other", "no_media")), \
                 mock.patch.object(instaloader_fetch, "fetch", side_effect=FetchFailed("other", "instaloader_error")), \
                 mock.patch.object(apify, "fetch", side_effect=FetchFailed("login_wall", "apify_login_required")), \
+                mock.patch.object(apify, "fetch_instagram_downloader", side_effect=FetchFailed("other", "apify_no_media")), \
                 mock.patch.object(instagram_embed, "cover_only", side_effect=FetchFailed("other", "ig_embed_no_data")):
             result = fetch("https://www.instagram.com/p/DAbCdEfGhIj/", self.root / "got", Config(), resolve=False)
         self.assertIsNone(result.post)
@@ -477,22 +509,25 @@ class ChainTests(unittest.TestCase):
                 mock.patch.object(ytdlp, "fetch", side_effect=FetchFailed("blocked", "empty_media_response")), \
                 mock.patch.object(instaloader_fetch, "fetch", side_effect=FetchFailed("blocked", "rate_limited")), \
                 mock.patch.object(apify, "fetch", side_effect=FetchFailed("blocked", "apify_blocked")), \
+                mock.patch.object(apify, "fetch_instagram_downloader", side_effect=FetchFailed("other", "apify_no_media")), \
                 mock.patch.object(instagram_embed, "cover_only", side_effect=FetchFailed("not_found", "ig_removed")):
             result = fetch("https://www.instagram.com/reel/DAbCdEfGhIj/", self.root / "got", Config(), resolve=False)
         self.assertIsNone(result.post)
         self.assertEqual(result.status_class, "not_found")
         self.assertEqual([a.outcome for a in result.attempts],
                          ["other:ig_licensed_audio", "blocked:empty_media_response", "blocked:rate_limited",
-                          "blocked:apify_blocked", "not_found:ig_removed"])
+                          "blocked:apify_blocked", "other:apify_no_media", "not_found:ig_removed"])
 
     def test_chains_follow_the_spec_order(self):
         from content_watcher import urls
         from content_watcher.fetch import _methods
         names = lambda link: [name for name, _ in _methods(urls.parse(link), Config())]
         self.assertEqual(names("https://www.instagram.com/reel/DAbC/"),
-                         ["instagram_embed", "ytdlp", "instaloader", "apify_instagram_reel", "instagram_cover_only"])
+                         ["instagram_embed", "ytdlp", "instaloader", "apify_instagram_reel", "apify_instagram_downloader",
+                          "instagram_cover_only"])
         self.assertEqual(names("https://www.instagram.com/p/CxYz/"),
-                         ["instagram_embed", "ytdlp_carousel", "instaloader", "apify_instagram_post", "instagram_cover_only"])
+                         ["instagram_embed", "ytdlp_carousel", "instaloader", "apify_instagram_post",
+                          "apify_instagram_downloader", "instagram_cover_only"])
         self.assertEqual(names("https://www.tiktok.com/@a/video/1"),
                          ["ytdlp", "gallerydl", "tiktok_page", "tikwm", "tikmate", "apify_tiktok"])
         self.assertEqual(names("https://www.tiktok.com/@a/photo/1"), ["gallerydl", "tiktok_page", "tikwm", "apify_tiktok"])
