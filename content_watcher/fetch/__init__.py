@@ -160,9 +160,12 @@ def fetch(url: str, dest: Path, config: Config | None = None, *, resolve: bool =
         return result
     if work.exists():
         shutil.rmtree(work)
-    # Every method failed: the request reports the last step's class (FETCH_METHODS.md, every chain).
+    # Every method failed: the request reports the last step's class (FETCH_METHODS.md, every chain), passing over
+    # steps that could only say "other". On 28 October an Instagram post behind a login wall reported "other", from
+    # the cover-only last resort, while Apify had said login_wall.
     if result.attempts:
-        result.status_class, result.detail = result.attempts[-1].outcome.split(":", 1)
+        named = [a for a in result.attempts if not a.outcome.startswith("other:")]
+        result.status_class, result.detail = (named or result.attempts)[-1].outcome.split(":", 1)
     else:
         result.status_class, result.detail = "other", "no_method"
     return result
