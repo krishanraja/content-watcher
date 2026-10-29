@@ -1,7 +1,7 @@
 # Content Watcher
 
 Anything Krish points at, a link to a post or a file he drops, becomes a full text reading on his own machine, with no
-model watching it. It serves makeyourmindup, his publication, and the content engine that makes it. This
+model watching it. Its readings feed the content engine, which is a makeyourmindup product, not a Mindmake one. This
 repository, `krishanraja/content-watcher` (renamed from `video-compression` on 2026-10-24), holds two things: Content
 Watcher (package `content_watcher`, command `content-watch`) and the Video Compression Engine below (package
 `video_compression`, command `video-compress`). His own recordings need both. Where each stands right now:

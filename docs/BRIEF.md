@@ -20,7 +20,7 @@ names. Where it says "check", check: this was true when it was written and parts
 > - Section 8 describes what other sessions were building. Control Center's link box and inspirationhouse's reading of
 >   `content_reads` now exist in those repositories (control-center `docs/app/inspiration/README.md`, inspirationhouse
 >   `README.md`); read those for their state.
-> - 2026-10-28: the watcher serves makeyourmindup, whose content engine is not a Mindmake product (Ruling, Krish,
+> - 2026-10-28: the watcher's readings feed the content engine, which is a makeyourmindup product and not a Mindmake one (Ruling, Krish,
 >   2026-10-28: "content-engine, which is not a mindmake product, it's a makeyourmindup product"). The `Mindmake/`
 >   Credential Manager key in section 4 and the scheduled task's name stay, because both home computers find them by
 >   name (`NOW.md`).
