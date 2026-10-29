@@ -100,7 +100,8 @@ Tags, all rules over what was measured: `trigger:*`, `hook` (first 3 s), `layout
 The watcher reads the Inspiration root (`content-watch config --inspiration-root`: the parent folder with Content
 Inspo and Production Inspo below it). From each video reading's timeline it curates at most 8 stills (one picture
 each, the best of each equal stretch of the video, so they cover it end to end) and copies them to a machine-owned
-folder outside his tree: `--machine-stills`, else the layout's runtime folder (`config/studio.json` `local_roots`
+folder outside his tree: `--machine-stills`, else the synced Drive folder My Drive > Ventures > Active Ventures >
+makeyourmindup > 4 Growth > Machine stills (Drive id `1ryqrwjUloZwlKjn8UroVb6buwKIAPvwf`) when the machine has it, else the layout's runtime folder (`config/studio.json` `local_roots`
 `runtime`, then `content-watcher/stills/<first 16 of sha256>/`). A folder inside or around his tree is refused, and
 the reading goes out as before. The row carries `machine_stills`; inspirationhouse must never count these as his
 inputs. The ux-feedback path (`content-watch timeline`, `feedback.py`) never makes them. Code:
@@ -111,10 +112,11 @@ inputs. The ux-feedback path (`content-watch timeline`, `feedback.py`) never mak
 | `format` | `content-watcher.machine-stills/1` |
 | `owner`, `tags`, `counts_as_his` | Always `machine`, `["machine"]` and `false`. |
 | `source_sha256`, `folder_key` | The reading's sha256, and the folder name the stills are in on the machine. |
+| `drive_folder_id`, `synced` | The Machine stills Drive folder's id, and whether this reading's stills went into its synced copy (`false`: they stay in the runtime folder). |
 | `limit`, `count` | 8, and how many were kept. |
 | `items` | `index` (the timeline still), `t`, `name`, `still_sha256`, `tags` (`machine` first, then the still's own). |
 
-The bytes stay on the machine until a machine-owned Drive folder outside his tree is named for them.
+inspirationhouse reads the folder by `drive_folder_id`; no permission was changed for it.
 
 ## What is not measured, honestly
 

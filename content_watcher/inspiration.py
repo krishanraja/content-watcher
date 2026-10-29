@@ -48,8 +48,12 @@ def _inside(path: Path, folder: Path) -> bool:
 
 
 def machine_dir(config: Config) -> Path:
-    """The machine-owned stills folder: config.machine_stills, else the layout's runtime folder. Never in his tree."""
-    chosen = Path(config.machine_stills) if config.machine_stills else layout.load().runtime_dir("content-watcher", "stills")
+    """The machine-owned stills folder: config.machine_stills, else the synced Machine stills Drive folder, else the
+    layout's runtime folder. Never in his tree."""
+    if config.machine_stills:
+        chosen = Path(config.machine_stills)
+    else:
+        chosen = config.machine_stills_synced() or layout.load().runtime_dir("content-watcher", "stills")
     resolved = chosen.resolve()
     for folder in his_tree(config):
         if _inside(resolved, folder) or _inside(folder, resolved):
@@ -120,7 +124,8 @@ def hand_over(reading, config: Config, limit: int = MAX_STILLS) -> dict | None:
         })
     block = {
         "format": FORMAT, "owner": TAG, "tags": [TAG], "counts_as_his": False, "source_sha256": reading.sha256,
-        "folder_key": key, "limit": limit, "count": len(items), "items": items,
+        "folder_key": key, "drive_folder_id": config.machine_stills_drive_id,
+        "synced": config.machine_stills_synced() is not None and root == config.machine_stills_synced(), "limit": limit, "count": len(items), "items": items,
     }
     (target / "stills.json").write_text(json.dumps(block, indent=2), encoding="utf-8")
     reading.read["machine_stills"] = block

@@ -34,9 +34,13 @@ class Config:
     # it. Either folder set on its own above still wins; unset ones are found below this one by name.
     inspiration_root: str | None = None
     # Where the curated stills of each reading go (at most 8, tagged machine, never counted as his): a machine-owned
-    # folder outside his Inspiration tree. Unset: the layout's runtime folder (config/studio.json local_roots),
-    # content-watcher/stills below it. A folder inside his tree is refused (inspiration.py).
+    # folder outside his Inspiration tree. Unset: the synced Machine stills Drive folder below, when this machine has
+    # it, else the layout's runtime folder (config/studio.json local_roots), content-watcher/stills below it. A folder inside his tree is refused (inspiration.py).
     machine_stills: str | None = None
+    # The machine-owned Drive folder the curated stills sync to (Krish's default, 2026-10-29): My Drive > Ventures >
+    # Active Ventures > makeyourmindup > 4 Growth > Machine stills, outside his Inspiration tree. inspirationhouse finds
+    # it by this id (it rides in each row's machine_stills); no permission was changed for it.
+    machine_stills_drive_id: str = "1ryqrwjUloZwlKjn8UroVb6buwKIAPvwf"
     # The synced My Drive itself, where a feedback video he links in Control Center is read from (feedback.py).
     # Unset: three folders up from Production Inspo (My Drive > Ventures > Inspiration > Production Inspo).
     drive_root: str | None = None
@@ -74,6 +78,14 @@ class Config:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(asdict(self), indent=2), encoding="utf-8")
         return target
+
+    def machine_stills_synced(self) -> Path | None:
+        """Where the Machine stills Drive folder syncs on this machine, when it is there."""
+        root = self.my_drive_root()
+        if root is None:
+            return None
+        found = root / "Ventures" / "Active Ventures" / "makeyourmindup" / "4 Growth" / "Machine stills"
+        return found if found.is_dir() else None
 
     def local_library(self) -> Path:
         return state_dir() / "library"
