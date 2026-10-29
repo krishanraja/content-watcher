@@ -54,7 +54,7 @@ class TasteBackstopTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_tagged_for_this_repository(self):
-        self.assertEqual(backstop.VENTURE, "makeyourmindup")
+        self.assertEqual(backstop.VENTURE, "publication")
         self.assertEqual(backstop.REPO, "krishanraja/content-watcher")
 
     def test_dry_run_keeps_only_his_flagged_lines(self):

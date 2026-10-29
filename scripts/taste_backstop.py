@@ -26,7 +26,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTBOX = Path('.scratch') / 'taste' / 'backstop.jsonl'
-VENTURE = 'makeyourmindup'
+VENTURE = 'publication'  # taste_reports.venture references venture_registry(slug); Make Your Mind Up is 'publication'
 REPO = 'krishanraja/content-watcher'
 MAX_LINE = 600
 MAX_TRANSCRIPT = 50 * 1024 * 1024
