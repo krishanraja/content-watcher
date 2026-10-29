@@ -30,6 +30,13 @@ class Config:
     # production quality I like"). The keys stay as the contract's folder values.
     video_inspiration: str | None = None  # synced path of Production Inspo (Drive 1QxrzxISYFXq0er0DG0XSapm7qhvuRmh-)
     cold_ideas: str | None = None  # synced path of Content Inspo (Drive 1FNztJOU82M8zb6IIbUAbvuI6Kr0pF5Hu)
+    # The Inspiration root (W3.2): the synced parent folder he linked, with Content Inspo and Production Inspo below
+    # it. Either folder set on its own above still wins; unset ones are found below this one by name.
+    inspiration_root: str | None = None
+    # Where the curated stills of each reading go (at most 8, tagged machine, never counted as his): a machine-owned
+    # folder outside his Inspiration tree. Unset: the layout's runtime folder (config/studio.json local_roots),
+    # content-watcher/stills below it. A folder inside his tree is refused (inspiration.py).
+    machine_stills: str | None = None
     # The synced My Drive itself, where a feedback video he links in Control Center is read from (feedback.py).
     # Unset: three folders up from Production Inspo (My Drive > Ventures > Inspiration > Production Inspo).
     drive_root: str | None = None
@@ -75,6 +82,9 @@ class Config:
         """The synced My Drive on this machine, or None when neither it nor Production Inspo is set."""
         if self.drive_root:
             return Path(self.drive_root)
+        if self.inspiration_root:
+            parents = Path(self.inspiration_root).parents
+            return parents[1] if len(parents) > 1 else None
         if self.video_inspiration:
             parents = Path(self.video_inspiration).parents
             return parents[2] if len(parents) > 2 else None
@@ -83,6 +93,16 @@ class Config:
     def folder_path(self, folder: str) -> Path | None:
         """The directory a contract folder name (video_inspiration, cold_ideas) files into."""
         if self.filing == "drive":
-            value = self.video_inspiration if folder == "video_inspiration" else self.cold_ideas
+            value = self.inspo_folder(folder)
             return Path(value) if value else None
         return self.local_library() / folder
+
+    def inspo_folder(self, folder: str) -> str | None:
+        """The synced path of Production Inspo (video_inspiration) or Content Inspo (cold_ideas): set on its own,
+        else the folder of that name below the Inspiration root when it is there."""
+        own = self.video_inspiration if folder == "video_inspiration" else self.cold_ideas
+        if own or not self.inspiration_root:
+            return own
+        name = "Production Inspo" if folder == "video_inspiration" else "Content Inspo"
+        below = Path(self.inspiration_root) / name
+        return str(below) if below.is_dir() else None

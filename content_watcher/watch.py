@@ -11,7 +11,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import ENGINE_REV, session
+from . import ENGINE_REV, inspiration, session
 from .config import Config, state_dir
 from .engine import Engine, EngineError, put_upload
 from .feedback import feedback_once
@@ -122,6 +122,7 @@ def handle_request(request: dict, config: Config, engine: Engine, state: State, 
                          whisper_model=config.whisper_model)
     for reading in readings:
         as_filed(reading, remap)
+    inspiration.hand_over_all(readings, config, counts)
     rows = [reading.contract_row() for reading in readings]
     engine.report(request_id, config.machine, "read", shape=shape, media=media, reads=rows)
     for reading in readings:
@@ -155,7 +156,7 @@ def drop_candidates(config: Config, state: State, limit: int = DROP_LIMIT) -> li
     """Newest unread files first, stopping at the limit: hashing a Drive file can mean downloading it."""
     files = []
     for folder in FOLDERS:
-        value = config.video_inspiration if folder == "video_inspiration" else config.cold_ideas
+        value = config.inspo_folder(folder)
         if not value or not Path(value).is_dir():
             continue
         for path in Path(value).iterdir():
@@ -203,6 +204,7 @@ def read_drops(config: Config, engine: Engine, state: State, counts: Counter, li
             counts["drop.read_error"] += 1
             state.mark_sent(sha, ENGINE_REV)  # do not retry a file that cannot be read every minute
             continue
+        inspiration.hand_over_all(readings, config, counts)
         engine.read(config.machine, [reading.contract_row() for reading in readings])
         for reading in readings:
             state.mark_sent(reading.sha256, ENGINE_REV)

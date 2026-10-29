@@ -95,6 +95,27 @@ each spoken sentence. Moments closer than 1.5 s merge and keep every trigger; at
 Tags, all rules over what was measured: `trigger:*`, `hook` (first 3 s), `layout:*`, `face:*`, `framing:*`,
 `change:large|small` (15% of the picture), `motion:*`, `speech:yes|none`, `ux_signal:*`.
 
+## Machine stills (every video reading with a timeline, W3.2)
+
+The watcher reads the Inspiration root (`content-watch config --inspiration-root`: the parent folder with Content
+Inspo and Production Inspo below it). From each video reading's timeline it curates at most 8 stills (one picture
+each, the best of each equal stretch of the video, so they cover it end to end) and copies them to a machine-owned
+folder outside his tree: `--machine-stills`, else the layout's runtime folder (`config/studio.json` `local_roots`
+`runtime`, then `content-watcher/stills/<first 16 of sha256>/`). A folder inside or around his tree is refused, and
+the reading goes out as before. The row carries `machine_stills`; inspirationhouse must never count these as his
+inputs. The ux-feedback path (`content-watch timeline`, `feedback.py`) never makes them. Code:
+`content_watcher/inspiration.py`.
+
+| Field | Meaning |
+|---|---|
+| `format` | `content-watcher.machine-stills/1` |
+| `owner`, `tags`, `counts_as_his` | Always `machine`, `["machine"]` and `false`. |
+| `source_sha256`, `folder_key` | The reading's sha256, and the folder name the stills are in on the machine. |
+| `limit`, `count` | 8, and how many were kept. |
+| `items` | `index` (the timeline still), `t`, `name`, `still_sha256`, `tags` (`machine` first, then the still's own). |
+
+The bytes stay on the machine until a machine-owned Drive folder outside his tree is named for them.
+
 ## What is not measured, honestly
 
 - Music versus speech is not classified; `sound_without_words_share` is the hint.

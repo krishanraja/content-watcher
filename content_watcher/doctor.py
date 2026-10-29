@@ -7,7 +7,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import ENGINE_REV, layout, secrets, session, tools
+from . import ENGINE_REV, inspiration, layout, secrets, session, tools
 from .config import Config, state_dir
 from .fetch import apify
 from .urls import BROWSER_UA
@@ -119,8 +119,8 @@ def checks(config: Config) -> list[dict]:
         add(f"cookies {platform}", bool(profile or found), detail, f"{platform} posts behind a login")
     add("filing", True, config.filing + (" (on this machine only)" if config.filing == "local" else " (the two Drive folders)"),
         "where fetched media goes")
-    for label, flag, value in (("Production Inspo", "--production-inspo", config.video_inspiration),
-                               ("Content Inspo", "--content-inspo", config.cold_ideas)):
+    for label, flag, value in (("Production Inspo", "--production-inspo", config.inspo_folder("video_inspiration")),
+                               ("Content Inspo", "--content-inspo", config.inspo_folder("cold_ideas"))):
         exists = bool(value) and Path(value).is_dir()
         add(f"folder {label}", exists, value or f"not set: content-watch config {flag} <synced path>",
             "filing and reading hand-dropped files", config.filing == "drive")
@@ -128,6 +128,12 @@ def checks(config: Config) -> list[dict]:
     found = bool(root) and (root / "Ventures").is_dir()
     add("drive root", found, (str(root) + ("" if found else " (no Ventures folder there)")) if root else
         "not set: content-watch config --drive-root <synced My Drive>", "feedback videos linked in Control Center")
+    try:
+        stills = str(inspiration.machine_dir(config))
+        stills_ok = True
+    except inspiration.MachineFolderError as refused:
+        stills, stills_ok = str(refused), False
+    add("machine stills", stills_ok, stills, "the curated stills of each reading, tagged machine (W3.2)")
     add("state", True, str(state_dir()), "local log, readings and state")
     studio = layout.load()
     add("local layout", studio.source is not None,
