@@ -7,7 +7,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import ENGINE_REV, secrets, session, tools
+from . import ENGINE_REV, layout, secrets, session, tools
 from .config import Config, state_dir
 from .fetch import apify
 from .urls import BROWSER_UA
@@ -129,6 +129,10 @@ def checks(config: Config) -> list[dict]:
     add("drive root", found, (str(root) + ("" if found else " (no Ventures folder there)")) if root else
         "not set: content-watch config --drive-root <synced My Drive>", "feedback videos linked in Control Center")
     add("state", True, str(state_dir()), "local log, readings and state")
+    studio = layout.load()
+    add("local layout", studio.source is not None,
+        f"{studio.source} (runtime {studio.runtime_dir()})" if studio.source else "no config/studio.json with local_roots",
+        "where repositories, worktrees and runtime live (W2.11)")
     add("browser user agent", True, BROWSER_UA, "TikTok and LinkedIn page reads")
     timeline_missing = [name for name, ok in (("faster-whisper", bool(whisper)), ("numpy", bool(numpy)),
                                               ("tesseract", bool(tesseract)), ("opencv", has_cascade)) if not ok]

@@ -1,0 +1,20 @@
+# The path guard (W2.11, Krish's saved Wave 2 brief): a hard-coded path into the dev folder fails the pull request.
+# Folders come from config/studio.json local_roots (content_watcher/layout.py); scripts/check_paths.py says which line.
+name: checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  path-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/check_paths.py
+      - run: python -m unittest tests.test_layout -v
