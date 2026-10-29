@@ -72,7 +72,7 @@ def _doctor(args: argparse.Namespace) -> int:
 
 def _config(args: argparse.Namespace) -> int:
     config = Config.load()
-    for field in ("filing", "video_inspiration", "cold_ideas", "drive_root", "engine_url", "machine", "whisper_model", "cobalt_url"):
+    for field in ("filing", "inspiration_root", "machine_stills", "video_inspiration", "cold_ideas", "drive_root", "engine_url", "machine", "whisper_model", "cobalt_url"):
         value = getattr(args, field)
         if value is not None:
             setattr(config, field, value)
@@ -126,6 +126,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     config = sub.add_parser("config", help="set this machine's settings")
     config.add_argument("--filing", choices=("local", "drive", "engine"))
+    config.add_argument("--inspiration-root", dest="inspiration_root",
+                        help="synced path of Ventures > Inspiration, with Content Inspo and Production Inspo below it")
+    config.add_argument("--machine-stills", dest="machine_stills",
+                        help="a machine-owned folder outside his Inspiration tree for the curated stills "
+                             "(default: the layout's runtime folder)")
     config.add_argument("--production-inspo", "--video-inspiration", dest="video_inspiration",
                         help="synced path of Ventures > Inspiration > Production Inspo")
     config.add_argument("--content-inspo", "--cold-ideas", dest="cold_ideas",
