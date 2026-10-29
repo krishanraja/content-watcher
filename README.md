@@ -1,10 +1,11 @@
 # Content Watcher
 
 Anything Krish points at, a link to a post or a file he drops, becomes a full text reading on his own machine, with no
-model watching it. This repository, `krishanraja/content-watcher` (renamed from `video-compression` on 2026-10-24),
-holds two things: Content Watcher (package `content_watcher`, command `content-watch`) and the Video Compression
-Engine below (package `video_compression`, command `video-compress`). His own recordings need both. Where each stands
-right now: [`NOW.md`](NOW.md).
+model watching it. Its readings feed the content engine, which is a makeyourmindup product, not a Mindmake one. This
+repository, `krishanraja/content-watcher` (renamed from `video-compression` on 2026-10-24), holds two things: Content
+Watcher (package `content_watcher`, command `content-watch`) and the Video Compression Engine below (package
+`video_compression`, command `video-compress`). His own recordings need both. Where each stands right now:
+[`NOW.md`](NOW.md).
 
 ## Content Watcher in one minute
 
@@ -31,7 +32,8 @@ Fetched media is filed into Drive > Ventures > Inspiration: Production Inspo or 
 
 Settings live in `%LOCALAPPDATA%\content-watcher\config.json` (`content-watch config --help`); keys are read from
 Windows Credential Manager (`Mindmake/engine-operator-token`, `Mindmake/apify-token`) and never printed. The log there
-carries counts and class names only.
+carries counts and class names only. The `Mindmake/` key names and the scheduled task's name, `Mindmake Content Watcher`,
+stay as they are: both home computers find them by name (`NOW.md`, 2026-10-28).
 
 ---
 
