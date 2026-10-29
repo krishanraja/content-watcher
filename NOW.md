@@ -67,7 +67,7 @@ Lifecycle: beta. Content Watcher is built, merged and installed on both home com
 - **Next action:** the first dropped file read on one computer and then skipped on the other (`drop.held` in its counts), which proves the engine's held check from both ends.
 - Checkpoint still open (brief section 10 step 2): read one real saved video from his Inspiration folder and compare its `read.md` token count with the taste ledger's eight 512px frames. Needs the home computer or his go-ahead to read one Drive file.
 - Measure the North Star number and record it on the first line under "Where it is right now".
-- North Star check (2026-10-29): holds.
+- North Star check (2026-10-29): recalibration proposed. The North Star still names only the compression engine, and this repository now also holds Content Watcher (D3 in `docs/DECISIONS.md`; the wording proposed to Krish is in `docs/BRIEF.md` section 3).
 
 ## Read next
 
