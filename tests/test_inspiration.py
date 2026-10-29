@@ -111,6 +111,11 @@ class MachineFolderTests(Base):
     def test_default_is_the_layout_runtime_folder(self):
         self.assertEqual(inspiration.machine_dir(self.config), self.base / "runtime" / "content-watcher" / "stills")
 
+    def test_the_synced_machine_stills_drive_folder_wins_when_present(self):
+        synced = self.base / "My Drive" / "Ventures" / "Active Ventures" / "makeyourmindup" / "4 Growth" / "Machine stills"
+        synced.mkdir(parents=True)
+        self.assertEqual(inspiration.machine_dir(self.config), synced)
+
     def test_a_folder_in_his_tree_is_refused(self):
         for inside in (self.root, self.root / "Content Inspo" / "stills", self.root.parent):
             with self.subTest(inside=inside):
@@ -129,6 +134,8 @@ class HandOverTests(Base):
         self.assertEqual(block["owner"], "machine")
         self.assertEqual(block["tags"], ["machine"])
         self.assertIs(block["counts_as_his"], False)
+        self.assertEqual(block["drive_folder_id"], "1ryqrwjUloZwlKjn8UroVb6buwKIAPvwf")
+        self.assertIs(block["synced"], False)
         folder = self.base / "runtime" / "content-watcher" / "stills" / ("ab" * 8)
         names = sorted(p.name for p in folder.iterdir() if p.suffix == ".jpg")
         self.assertEqual(names, sorted(item["name"] for item in block["items"]))
