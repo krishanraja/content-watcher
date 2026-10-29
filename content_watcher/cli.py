@@ -1,4 +1,4 @@
-"""content-watch: fetch, read, watch and doctor."""
+"""content-watch: fetch, read, timeline, audio, watch and doctor."""
 
 from __future__ import annotations
 
@@ -51,6 +51,21 @@ def _timeline(args: argparse.Namespace) -> int:
           f"{len(data['ux_signals'])} UX signals")
     print(f"  {folder / 'timeline.md'}")
     print(f"  {folder / 'stills'}")
+    return 0
+
+
+def _audio(args: argparse.Namespace) -> int:
+    """A video's audio on its own, with ffmpeg alone: no model and no tokens."""
+    from .read.audio import extract
+
+    try:
+        output = extract(Path(args.path).expanduser().resolve(), Path(args.out).expanduser().resolve(),
+                         fmt=args.format, speech=args.speech)
+    except (ValueError, FileExistsError, RuntimeError) as exc:
+        print(f"Failed: {exc}")
+        return 2
+    print(f"Audio, {output.stat().st_size / 1_000_000:.1f} MB:")
+    print(f"  {output}")
     return 0
 
 
@@ -115,6 +130,14 @@ def build_parser() -> argparse.ArgumentParser:
     timeline.add_argument("--max", type=int, help="most stills to keep (default 120 for ux, 40 for social)")
     timeline.add_argument("--whisper", help="faster-whisper model size (default from config, small)")
     timeline.set_defaults(func=_timeline)
+
+    audio = sub.add_parser("audio", help="a video's audio track as its own file, with ffmpeg alone (no AI)")
+    audio.add_argument("path")
+    audio.add_argument("--out", default="audio")
+    audio.add_argument("--format", choices=("copy", "wav", "mp3"), default="copy",
+                       help="copy keeps the original audio untouched and is fastest (default); wav and mp3 re-encode")
+    audio.add_argument("--speech", action="store_true", help="with --format wav: 16 kHz mono, the shape Whisper reads")
+    audio.set_defaults(func=_audio)
 
     watch = sub.add_parser("watch", help="one run of the queue and the drop folders")
     watch.add_argument("--once", action="store_true", required=True)

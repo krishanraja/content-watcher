@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import array
 import html
+import json
 import os
 import re
 from dataclasses import dataclass, field
@@ -163,3 +164,64 @@ def silences(path: Path, *, noise_db: int = -35, minimum: float = 0.5, timeout: 
             spans.append({"start": round(start, 2), "end": round(float(ended.group(1)), 2)})
             start = None
     return spans
+
+
+_CONTAINER = {"aac": ".m4a", "alac": ".m4a", "opus": ".opus", "mp3": ".mp3", "vorbis": ".ogg", "flac": ".flac"}
+
+
+def _probe_audio(path: Path, timeout: float = 30) -> tuple[str | None, float | None]:
+    """The first audio stream's codec and duration in seconds."""
+    ffprobe = tools.need("ffprobe")
+    ran = tools.run(
+        [ffprobe, "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name,duration:format=duration",
+         "-of", "json", path],
+        timeout=timeout,
+    )
+    if ran.returncode != 0:
+        return None, None
+    data = json.loads(ran.stdout or "{}")
+    stream = (data.get("streams") or [{}])[0]
+    duration = stream.get("duration") or (data.get("format") or {}).get("duration")
+    try:
+        seconds = float(duration) if duration not in (None, "N/A") else None
+    except ValueError:
+        seconds = None
+    return stream.get("codec_name"), seconds
+
+
+def extract(path: Path, out_dir: Path, *, fmt: str = "copy", speech: bool = False, timeout: float = 600) -> Path:
+    """Write a video's audio track to its own file with ffmpeg alone: no model, no tokens.
+
+    copy keeps the original audio bit for bit and is the fastest; wav and mp3 re-encode. speech makes the
+    wav 16 kHz mono, the shape Whisper reads. An existing output is never overwritten and the source is never touched.
+    """
+    if fmt not in ("copy", "wav", "mp3"):
+        raise ValueError(f"unknown format {fmt}")
+    if not has_audio_stream(path):
+        raise ValueError(f"{path} has no audio stream")
+    codec, source_seconds = _probe_audio(path)
+    if fmt == "copy":
+        suffix, codec_args = _CONTAINER.get(codec or "", ".mka"), ["-c:a", "copy"]
+    elif fmt == "wav":
+        suffix, codec_args = ".wav", ["-c:a", "pcm_s16le"] + (["-ar", str(SAMPLE_RATE), "-ac", "1"] if speech else [])
+    else:
+        suffix, codec_args = ".mp3", ["-c:a", "libmp3lame", "-q:a", "2"]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    output = out_dir / f"{path.stem}{suffix}"
+    if output.exists():
+        raise FileExistsError(f"{output} already exists")
+    ffmpeg = tools.need("ffmpeg")
+    ran = tools.run(
+        [ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error", "-n", "-i", path, "-vn", "-sn", "-dn",
+         "-map", "0:a:0", *codec_args, output],
+        timeout=timeout,
+    )
+    if ran.returncode != 0 or not output.exists() or output.stat().st_size == 0:
+        output.unlink(missing_ok=True)
+        reason = "timed out" if ran.timed_out else " ".join(ran.stderr.strip().splitlines()[-3:])
+        raise RuntimeError(f"ffmpeg could not extract the audio: {reason}")
+    _, out_seconds = _probe_audio(output)
+    if source_seconds and (out_seconds is None or abs(out_seconds - source_seconds) > 0.5):
+        output.unlink(missing_ok=True)
+        raise RuntimeError(f"extracted audio lasts {out_seconds}s, the source's {source_seconds}s")
+    return output

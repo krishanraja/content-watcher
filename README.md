@@ -15,6 +15,7 @@ content-watch doctor                # what this machine can and cannot do, namin
 content-watch read path/to/video.mp4 --out readings      # read.json + read.md, measured locally
 content-watch fetch "https://www.tiktok.com/@a/video/1" --out fetched
 content-watch timeline path/to/recording.mp4 --profile ux   # stills with what was said and shown at each; local only
+content-watch audio path/to/video.mp4                        # the audio track as its own file, ffmpeg only, no AI (--format wav --speech for Whisper)
 content-watch watch --once          # claim pasted links, fetch, file, read, report; then read new drops
 ```
 
