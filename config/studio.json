@@ -1,0 +1,10 @@
+{
+  "schema": "studio/1",
+  "why": "W2.11, one local layout (Krish's saved Wave 2 brief). A copy of the shape in growth-makeyourmindup config/studio.json. content_watcher/layout.py reads content-engine's config/studio.json first, when that clone sits beside this one and carries local_roots, and this file otherwise. The CI path guard (scripts/check_paths.py) refuses a hard-coded dev path anywhere else. Moving an existing clone waits on his consent row for that exact folder (Wave 3, W3.4).",
+  "local_roots": {
+    "repos": "C:\\Users\\krish\\dev\\makeyourmindup\\{repo}",
+    "worktrees": "C:\\Users\\krish\\dev\\makeyourmindup\\.worktrees\\{repo}\\{branch}",
+    "runtime": "%LOCALAPPDATA%\\makeyourmindup\\"
+  },
+  "preserve": [".scratch"]
+}
