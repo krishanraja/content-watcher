@@ -20,6 +20,10 @@ names. Where it says "check", check: this was true when it was written and parts
 > - Section 8 describes what other sessions were building. Control Center's link box and inspirationhouse's reading of
 >   `content_reads` now exist in those repositories (control-center `docs/app/inspiration/README.md`, inspirationhouse
 >   `README.md`); read those for their state.
+> - 2026-10-28: the watcher serves makeyourmindup, whose content engine is not a Mindmake product (Ruling, Krish,
+>   2026-10-28: "content-engine, which is not a mindmake product, it's a makeyourmindup product"). The `Mindmake/`
+>   Credential Manager key in section 4 and the scheduled task's name stay, because both home computers find them by
+>   name (`NOW.md`).
 > - Section 10: steps 3 and 5 are built in this repository (the fetchers, the scheduled task and `doctor`), and step 4
 >   is recorded as merged in content-engine (#161). Still open: the step 2 checkpoint, the live fetch per platform, and
 >   the step 6 end-to-end run.
