@@ -31,7 +31,7 @@ Its readings feed the content engine, which is a makeyourmindup product, not a M
 Lifecycle: beta. Content Watcher is built, merged and installed on both home computers, but no pasted link has been followed end to end yet. The Video Compression Engine is published and unchanged since 2026-09-15 (`git log -- video_compression`). The detail is in `README.md`.
 
 - **Built and on main** (`git log`, `content_watcher/`): the reading engine, the fetch chains for Instagram, TikTok, YouTube and LinkedIn (`docs/FALLBACKS.md`, `content_watcher/fetch/__init__.py`), the watch loop, `doctor`, and `scripts/install-content-watch.ps1`. Merged as #3, #4, #6, #7 and #8; the build branch is gone.
-- **Tests** (run 2026-10-28, `python3 -m unittest discover -s tests -v`, Linux container with FFmpeg, tesseract, espeak-ng, faster-whisper 1.2.1 and OpenCV 4.14): 133 tests, all pass, 2 skipped (Windows-only window checks). With faster-whisper, OpenCV and tesseract hidden, as on CI: 133 pass, 5 skipped. They use fixtures, fake responses and generated media; none reaches a platform.
+- **Tests** (run 2026-10-29, `python3 -m unittest discover -s tests`, Linux container): 141 tests, all pass, 3 skipped. They use fixtures, fake responses and generated media; none reaches a platform. On 2026-10-28 the count was 133, and with faster-whisper, OpenCV and tesseract hidden, as on CI, all passed with 5 skipped.
 - **Tested live, from a cloud machine on 2026-10-24** (`docs/FALLBACKS.md`): Instagram's embed player on a reel, a three-video carousel and a photo post, with a full fetch and reading of the reel through `content-watch`; TikWM on a TikTok video and photo post. **Not tested live:** the YouTube and LinkedIn chains (built from the research in `docs/FETCH_METHODS.md`, fixture tests only), Tikmate's download, and any Apify run.
 - **Installed on both home computers** (2026-10-24, readback pasted by Krish; not checkable from this repository). No live end-to-end run is recorded: a link pasted on the Inspiration board, fetched, filed and read back on the engine.
 - **Engine routes** (`docs/WATCH_API.md`): recorded as merged in content-engine (#161, 2026-10-24). No live call from a home computer has reached them yet. This repository cannot read content-engine, so the merge is taken from the record.
@@ -67,7 +67,7 @@ Lifecycle: beta. Content Watcher is built, merged and installed on both home com
 - **Next action:** the first dropped file read on one computer and then skipped on the other (`drop.held` in its counts), which proves the engine's held check from both ends.
 - Checkpoint still open (brief section 10 step 2): read one real saved video from his Inspiration folder and compare its `read.md` token count with the taste ledger's eight 512px frames. Needs the home computer or his go-ahead to read one Drive file.
 - Measure the North Star number and record it on the first line under "Where it is right now".
-- North Star check (2026-10-29): recalibration proposed. The North Star still names only the compression engine, and this repository now also holds Content Watcher (D3 in `docs/DECISIONS.md`; the wording proposed to Krish is in `docs/BRIEF.md` section 3).
+- North Star check (2026-10-29): holds.
 
 ## Read next
 
