@@ -1342,6 +1342,12 @@ docker run --name bgutil-provider -d --init -p 127.0.0.1:4416:4416 brainicism/bg
      about 4244 to 4335). Add `,en` only when an English translation is wanted. Uploaded tracks probably carry no
      `-orig` label, so this pattern may skip them (inference, open question 4). The last fall-through below covers
      that case.
+   - A video YouTube has auto-dubbed has one machine caption track per dub, and yt-dlp labels each `<lang>-orig`,
+     so `.*-orig` returns `ar-orig`, `de-orig`, `en-orig` and so on. The watcher keeps the one in the original audio
+     track's language (`ytdlp.pick_captions`; the original track is the one yt-dlp marks `original`), and with
+     several and no original known it keeps none, so the reading transcribes the audio. It asks for the original
+     audio track by name in the format string, and fetches once more with that track's format id when yt-dlp
+     still chose a dub (31 October 2026: an English Short read as Arabic from the `ar-orig` captions).
    - This is not one request. It makes one webpage request, one player request per client (three by default) and one
      request per caption track. All of them count against the guest limit of about 1,000 requests, or about 300
      videos, an hour ([Extractors wiki](https://github.com/yt-dlp/yt-dlp/wiki/Extractors)). The limit falls on the IP,

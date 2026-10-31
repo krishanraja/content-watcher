@@ -8,7 +8,11 @@ from pathlib import Path
 from ..post import IMAGE_EXT, Post, VIDEO_EXT
 from .base import FetchFailed, has_audio, load_json, run_tool
 
-QUALITY = "bv*[height<=720]+ba/b[height<=720]/bv*+ba/b"
+# The audio track the speaker recorded, never a dub. yt-dlp marks YouTube's original track "original" in its format
+# note and ranks it first; the explicit filter keeps that true if the ranking ever changes. On 31 October 2026 a Hannah
+# Fry Short came back with an Arabic transcript, from the captions of YouTube's Arabic auto-dub (see pick_captions).
+QUALITY = ("bv*[height<=720]+ba[format_note*=original]/bv*[height<=720]+ba[format_note!*=?dubbed]"
+           "/b[height<=720]/bv*+ba[format_note*=original]/bv*+ba/b")
 
 AUTHOR_KEYS = {
     "instagram": ("channel", "uploader_id", "uploader"),
@@ -36,6 +40,70 @@ def post_from_info(info: dict, platform: str, url: str) -> Post:
                 posted_at=posted, caption=caption, counts=counts)
 
 
+def _audio_formats(info: dict) -> list[dict]:
+    return [f for f in info.get("formats") or [] if f.get("acodec") not in (None, "none") and f.get("vcodec") in (None, "none")]
+
+
+def _is_original(fmt: dict) -> bool:
+    return (fmt.get("language_preference") or 0) >= 10 or "original" in str(fmt.get("format_note") or "").lower()
+
+
+def original_language(info: dict) -> str | None:
+    """The language the video was spoken in: the original audio track's, else the one yt-dlp names for the video."""
+    for fmt in _audio_formats(info):
+        if _is_original(fmt) and fmt.get("language"):
+            return str(fmt["language"]).split("-")[0].lower()
+    language = info.get("language")
+    return str(language).split("-")[0].lower() if language else None
+
+
+def original_audio_id(info: dict) -> str | None:
+    """The best original-language audio-only format, when the video has more than one audio language."""
+    audio = _audio_formats(info)
+    if len({f.get("language") for f in audio if f.get("language")}) < 2:
+        return None
+    originals = [f for f in audio if _is_original(f) and "drc" not in str(f.get("format_id"))]
+    if not originals:
+        return None
+    return str(max(originals, key=lambda f: (f.get("abr") or f.get("tbr") or 0))["format_id"])
+
+
+def chose_dub(info: dict) -> bool:
+    """yt-dlp picked an audio track in another language than the original one."""
+    original = original_language(info)
+    chosen = [f for f in info.get("requested_formats") or [info] if f.get("acodec") not in (None, "none")]
+    if not original or not chosen:
+        return False
+    language = chosen[-1].get("language")
+    return bool(language) and str(language).split("-")[0].lower() != original and not _is_original(chosen[-1])
+
+
+def pick_captions(files: list[Path], original: str | None) -> Path | None:
+    """The captions in the language spoken. YouTube auto-dubs a video into other languages and machine-captions each
+    dub, and yt-dlp names every machine caption "<lang>-orig", so `.*-orig` brings back ar-orig beside en-orig. The
+    old rule took the first by name: Arabic. Now the original language decides; with several and no way to tell,
+    none, so the reading transcribes the original audio itself."""
+    def lang(path: Path) -> str:
+        parts = path.name.lower().split(".")
+        return parts[-2] if len(parts) >= 3 else ""
+
+    if original:
+        for wanted in (f"{original}-orig", original):
+            exact = [p for p in files if lang(p) == wanted]
+            if exact:
+                return exact[0]
+        regional = [p for p in files if lang(p).startswith(f"{original}-") and not lang(p).endswith("-orig")]
+        # Captions only in other languages are a translation or a dub's: the reading transcribes the audio instead.
+        return regional[0] if regional else None
+    orig = [p for p in files if lang(p).endswith("-orig")]
+    if len(orig) == 1:
+        return orig[0]
+    if len(orig) > 1:
+        return None
+    english = [p for p in files if lang(p) == "en" or lang(p).startswith("en-")]
+    return (english or files or [None])[0]
+
+
 def fetch(url: str, platform: str, folder: Path, *, captions: str | None = None, cookies_profile: str | None = None,
           timeout: float = 600, method: str = "ytdlp", extra: list[str] | None = None,
           need_audio: bool = False) -> Post:
@@ -58,20 +126,33 @@ def fetch(url: str, platform: str, folder: Path, *, captions: str | None = None,
     if cookies_profile:
         args += ["--cookies-from-browser", f"firefox:{cookies_profile}"]
         method += "_cookies"
-    args.append(url)
-    ran = run_tool("yt-dlp", args, timeout=timeout)
+    ran = run_tool("yt-dlp", [*args, url], timeout=timeout)
     infos = sorted(folder.glob("*.info.json"))
     videos = [p for p in sorted(folder.iterdir()) if p.suffix.lower() in VIDEO_EXT and ".part" not in p.name]
     if not videos:
         raise FetchFailed("other", "no_video_in_post" if "no video" in ran.stderr.lower() else "no_media_written")
+    info = load_json(infos[0]) if infos else {}
+    audio_id = original_audio_id(info)
+    if chose_dub(info) and audio_id:
+        # A dub slipped through: fetch once more with the original track named outright.
+        for path in videos:
+            path.unlink()
+        index = args.index("-f")
+        again = [*args[:index + 1], f"bv*[height<=720]+{audio_id}/bv*+{audio_id}", *args[index + 2:], "--no-write-subs",
+                 "--no-write-auto-subs", url]
+        run_tool("yt-dlp", again, timeout=timeout)
+        videos = [p for p in sorted(folder.iterdir()) if p.suffix.lower() in VIDEO_EXT and ".part" not in p.name]
+        if not videos:
+            raise FetchFailed("other", "no_original_audio")
+        info = load_json(infos[0]) if infos and infos[0].is_file() else info
+        if chose_dub(info):
+            raise FetchFailed("other", "dubbed_audio_only")
     if need_audio and has_audio(videos[0]) is False:
         raise FetchFailed("other", "no_audio")
-    info = load_json(infos[0]) if infos else {}
     post = post_from_info(info, platform, url)
     post.media = [videos[0]]
     subtitles = sorted(p for p in folder.iterdir() if p.suffix.lower() in (".vtt", ".srt"))
-    preferred = [p for p in subtitles if "-orig" in p.name.lower()] or [p for p in subtitles if ".en" in p.name.lower()]
-    post.captions_file = (preferred or subtitles or [None])[0]
+    post.captions_file = pick_captions(subtitles, original_language(info))
     post.method = method
     post.shape = "video"
     for item in infos:

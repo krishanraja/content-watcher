@@ -13,7 +13,7 @@ from video_compression.ffmpeg import probe_media
 
 from .. import ENGINE_REV, READ_FORMAT, tools
 from ..post import Post, kind_of, mime_of
-from . import audio, visual
+from . import audio, language, visual
 from .render import render_md
 
 HOOK_SECONDS = 3.0
@@ -159,6 +159,7 @@ def read_video(path: Path, *, post: Post | None = None, captions: Path | None = 
     for item in text["items"]:
         shot = data["shots"]["list"][item["shot"]]
         shot.setdefault("screen_text", []).append(item["text"])
+    heard, captions = _check_language(data, heard, captions, path, text["items"], info.has_audio, whisper_model)
     for shot in data["shots"]["list"]:
         for move in data["camera_moves"]:
             if move["start"] == shot["start"]:
@@ -232,6 +233,30 @@ def read_video(path: Path, *, post: Post | None = None, captions: Path | None = 
         data["unmeasured"].append("timeline")
     return Reading(sha, "video", post.platform if post else "own", post.url if post else None,
                    data, render_md(data), frame_paths, stills=stills)
+
+
+def _check_language(data: dict, heard: audio.Heard, captions: Path | None, path: Path, screen: list[dict],
+                    has_audio: bool, whisper_model: str | None) -> tuple[audio.Heard, Path | None]:
+    """The words must be in the language on screen. Captions in another language are a dub's or a translation's
+    (31 October 2026: the Arabic auto-dub captions of an English Short), so the file's own audio is transcribed
+    instead. A transcript that still does not match is withheld and named `transcript_language_mismatch`, never
+    stored as the words."""
+    shown = "\n".join(item["text"] for item in screen)
+    check = language.compare(heard.text, shown)
+    if check["match"] is False and heard.source == "captions" and has_audio:
+        retry = audio.transcribe(path, model_size=whisper_model)
+        again = language.compare(retry.text, shown)
+        if retry.heard == "words" and again["match"] is not False:
+            heard, captions, check = retry, None, {**again, "replaced": "captions"}
+        else:
+            check["retry"] = {"source": retry.source, "heard": retry.heard, "words": again["words"]}
+    if check["match"] is False:
+        check["status"] = "transcript_language_mismatch"
+        check["withheld"] = {"source": heard.source, "text": heard.text}
+        heard = audio.Heard("failed", "transcript_language_mismatch", heard.source, heard.language)
+    _heard_into(data, heard)
+    data["words"]["language_check"] = check
+    return heard, captions
 
 
 def _face_in(face_data: dict, samples: list, start: float, end: float):

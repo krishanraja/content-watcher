@@ -24,7 +24,7 @@ Readers: inspirationhouse tags cards from `read_md` and these top-level fields o
 | `file` | object | `name`, `bytes`, `mime`. |
 | `post` | object or null | `{ author, posted_at, caption, url, platform }` when the file came from a post; null for a hand-dropped file (a filed text post fills it from its own header). |
 | `heard` | string | `words`, `silent` or `failed`. |
-| `heard_class` | string or null | Why, when not `words`: `no_audio_stream`, `digital_silence`, `no_speech`, `empty_audio`, `empty_captions`, `not_applicable` (an image or text), `no_whisper`, `decode_error`, `whisper_error`. |
+| `heard_class` | string or null | Why, when not `words`: `no_audio_stream`, `digital_silence`, `no_speech`, `empty_audio`, `empty_captions`, `not_applicable` (an image or text), `no_whisper`, `decode_error`, `whisper_error`, `transcript_language_mismatch` (a video whose words are in another language than its screen text, even after transcribing the file's own audio: the words are withheld, see `words.language_check`). |
 | `words_text` | string | The plain transcript ("" when nothing was heard). |
 | `position` | object | `{ index, of }`: where this file sits in its post (fetched posts only). |
 | `unmeasured` | list | Measures this machine could not take, by name (`words`, `screen_text`, `faces`, `camera_moves`). Missing measures are named, never silently zero. |
@@ -34,7 +34,7 @@ Readers: inspirationhouse tags cards from `read_md` and these top-level fields o
 | Field | Meaning |
 |---|---|
 | `video` | `duration_s`, `width`, `height`, `fps`, `aspect` (`9:16`, `4:5`, `1:1`, `16:9`, ...), `has_audio`. |
-| `words` | `source` (`captions` when the platform supplied subtitles, else `whisper`), `language`, `segments` (`start`, `end`, `text`), `word_count`. |
+| `words` | `source` (`captions` when the platform supplied subtitles, else `whisper`), `language`, `segments` (`start`, `end`, `text`), `word_count`, and `language_check`: `words` and `screen` (the language each is in, an ISO 639-1 code or a script name such as `latin`, or null when there is too little to tell), `match` (true, false, or null when it cannot be told). Captions in another language than the screen text are a dub's or a translation's, so the file's audio is transcribed instead and `replaced` reads `captions`. When the words still do not match, `status` is `transcript_language_mismatch` and `withheld` keeps their `source` and `text` for inspection, outside `words_text`. |
 | `shots` | `count`, `cuts` (seconds), `cuts_per_min`, `length_s` (`median`, `mean`, `min`, `max`), `list`: one entry per shot with `start`, `end`, and when measured `face_share`, `face_height`, `move`, `screen_text`. Cuts come from ffmpeg's scene score at 0.3. |
 | `camera_moves` | Per shot that moves: `kind` (`push_in`, `pull_out`, `pan_left`, `pan_right`, `tilt_up`, `tilt_down`), `zoom` (total scale across the shot), `shift_x_share`. Measured by matching consecutive frames (4 a second) for scale and shift. |
 | `screen_text` | Words on screen: `t`, `shot`, `text`, `text_area_share`, from tesseract on the middle of each shot and every 3 seconds in long shots. Repeats are dropped. |
