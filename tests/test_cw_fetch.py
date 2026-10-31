@@ -41,6 +41,26 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(tiktok.author, "maker.example")
         self.assertEqual(tiktok.counts["shares"], 450)
 
+    def test_ytdlp_multi_audio_track_format_list(self):
+        info = load("ytdlp_youtube_dubbed.info.json")
+        self.assertEqual(ytdlp.original_language(info), "en")
+        self.assertEqual(ytdlp.original_audio_id(info), "251-2")
+        self.assertTrue(ytdlp.chose_dub(info))
+        info["requested_formats"] = [info["formats"][0], info["formats"][5]]
+        self.assertFalse(ytdlp.chose_dub(info))
+        single = {"formats": [f for f in info["formats"] if f.get("language") in (None, "en", "en-US")], "language": "en"}
+        self.assertIsNone(ytdlp.original_audio_id(single))
+        self.assertIn("ba[format_note*=original]", ytdlp.QUALITY.split("/")[0])
+
+    def test_caption_choice_follows_the_spoken_language(self):
+        names = [Path(f"youtube_x.{lang}.vtt") for lang in ("ar-orig", "de-orig", "en-orig", "es-orig")]
+        self.assertEqual(ytdlp.pick_captions(names, "en").name, "youtube_x.en-orig.vtt")
+        self.assertIsNone(ytdlp.pick_captions(names, None))
+        self.assertIsNone(ytdlp.pick_captions([Path("youtube_x.ar-orig.vtt")], "en"))
+        self.assertEqual(ytdlp.pick_captions([Path("t.en.vtt"), Path("t.de-orig.vtt")], None).name, "t.de-orig.vtt")
+        self.assertEqual(ytdlp.pick_captions([Path("t.fr.vtt"), Path("t.en.vtt")], None).name, "t.en.vtt")
+        self.assertIsNone(ytdlp.pick_captions([], "en"))
+
     def test_gallerydl_metadata(self):
         post = gallerydl.post_from_metadata(load("gallerydl_instagram_meta.json"), "instagram", "u")
         self.assertEqual((post.post_id, post.author), ("CxYzSide01", "carousel.example"))
@@ -316,6 +336,53 @@ pathlib.Path(base + '.info.json').write_text(json.dumps({'id': 'dQw4w9WgXcQ', 'c
         with mock.patch.dict(os.environ, with_path(self.bin)):
             post = ytdlp.fetch("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "youtube", self.folder, captions="youtube")
         self.assertTrue(post.captions_file.name.endswith(".de-orig.vtt"))
+
+    def test_youtube_auto_dub_captions_never_win_by_name(self):
+        # 31 October 2026: every dub's machine captions are "<lang>-orig", and ar-orig sorted before en-orig.
+        fake_tool(self.bin, "yt-dlp", f"""
+info = json.loads(pathlib.Path({str(FIXTURES / 'ytdlp_youtube_dubbed.info.json')!r}).read_text())
+info['requested_formats'] = [info['formats'][0], info['formats'][5]]
+base = args[args.index('-o') + 1].replace('%(id)s', info['id']).rsplit('.', 1)[0]
+pathlib.Path(base + '.mp4').write_bytes(b'v')
+for lang in ('ar', 'de', 'en', 'es', 'hi'):
+    pathlib.Path(base + f'.{{lang}}-orig.vtt').write_text('WEBVTT')
+pathlib.Path(base + '.info.json').write_text(json.dumps(info))
+""")
+        with mock.patch.dict(os.environ, with_path(self.bin)):
+            post = ytdlp.fetch("https://www.youtube.com/shorts/wh3D5Zx6Prg", "youtube", self.folder, captions="youtube")
+        self.assertTrue(post.captions_file.name.endswith(".en-orig.vtt"), post.captions_file.name)
+
+    def test_youtube_dub_chosen_fetches_again_with_the_original_track(self):
+        calls = self.root / "calls.txt"
+        fake_tool(self.bin, "yt-dlp", f"""
+info = json.loads(pathlib.Path({str(FIXTURES / 'ytdlp_youtube_dubbed.info.json')!r}).read_text())
+spec = args[args.index('-f') + 1]
+with open({str(calls)!r}, 'a') as log:
+    log.write(spec + '\\n')
+if '251-2' in spec:
+    info['requested_formats'] = [info['formats'][0], info['formats'][5]]
+base = args[args.index('-o') + 1].replace('%(id)s', info['id']).rsplit('.', 1)[0]
+pathlib.Path(base + '.mp4').write_bytes(b'v')
+pathlib.Path(base + '.info.json').write_text(json.dumps(info))
+""")
+        with mock.patch.dict(os.environ, with_path(self.bin)):
+            post = ytdlp.fetch("https://www.youtube.com/shorts/wh3D5Zx6Prg", "youtube", self.folder, captions="youtube")
+        specs = calls.read_text().splitlines()
+        self.assertEqual(len(specs), 2)
+        self.assertIn("format_note*=original", specs[0])
+        self.assertEqual(specs[1], "bv*[height<=720]+251-2/bv*+251-2")
+        self.assertEqual(post.media[0].suffix, ".mp4")
+
+    def test_youtube_only_dubs_left_fails_on_to_the_next_method(self):
+        fake_tool(self.bin, "yt-dlp", f"""
+info = json.loads(pathlib.Path({str(FIXTURES / 'ytdlp_youtube_dubbed.info.json')!r}).read_text())
+base = args[args.index('-o') + 1].replace('%(id)s', info['id']).rsplit('.', 1)[0]
+pathlib.Path(base + '.mp4').write_bytes(b'v')
+pathlib.Path(base + '.info.json').write_text(json.dumps(info))
+""")
+        with mock.patch.dict(os.environ, with_path(self.bin)), self.assertRaises(FetchFailed) as failure:
+            ytdlp.fetch("https://www.youtube.com/shorts/wh3D5Zx6Prg", "youtube", self.folder, captions="youtube")
+        self.assertEqual(failure.exception.detail, "dubbed_audio_only")
 
     def test_gallerydl_slides_in_order_with_sound(self):
         fake_tool(self.bin, "gallery-dl", """
