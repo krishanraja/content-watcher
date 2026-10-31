@@ -16,8 +16,7 @@
   $ErrorActionPreference = "Stop"
   $TaskName = "Mindmake Content Watcher"
   $Py = "py"; $PyVer = "-3.12"
-  $Check = "wh3D5Zx6Prg"
-  $task = $null; $wasEnabled = $false; $ok = $false
+  $task = $null; $wasEnabled = $false; $ok = $false; $pulled = $false
 
   function Say($text, $colour = "Gray") { Write-Host $text -ForegroundColor $colour }
   function Native([scriptblock]$block) {
@@ -73,8 +72,11 @@
     # 3. Pause the task, letting a run in progress finish.
     if ($task) {
       Disable-ScheduledTask -TaskName $TaskName | Out-Null
+      # A disabled task reports "Disabled" even mid-run, so look for the run itself.
+      function WatchRunning { [bool](Get-CimInstance Win32_Process -Filter "Name like 'python%'" -ErrorAction SilentlyContinue |
+          Where-Object { $_.CommandLine -match "content_watcher\s+watch" }) }
       $waited = 0
-      while ((Get-ScheduledTask -TaskName $TaskName).State -eq "Running" -and $waited -lt 600) {
+      while ((WatchRunning) -and $waited -lt 600) {
         if ($waited -eq 0) { Say "..  waiting for the current watch run to finish (up to 10 minutes)" Yellow }
         Start-Sleep -Seconds 10; $waited += 10
       }
@@ -85,6 +87,7 @@
     $r = Native { git -C $repo merge --ff-only origin/main }
     if ($r.code -ne 0) { throw "git could not fast-forward to main.`n$($r.out)" }
     $after = (Native { git -C $repo rev-parse --short HEAD }).out.Trim()
+    $pulled = $true
     Say "ok  code         $before -> $after" Green
     if (-not (Select-String -Path (Join-Path $repo "content_watcher\fetch\ytdlp.py") -Pattern "def pick_captions" -Quiet)) {
       throw "main does not have the language fix yet (no pick_captions). Ask Claude whether PR #26 is merged."
@@ -120,9 +123,13 @@
     }
   }
 
-  if (-not $ok) { Say "The watcher is back on the code it had before this paste." Yellow; return }
+  if (-not $ok) {
+    if ($pulled) { Say "The code moved to main but the install did not finish. Fix what STOPPED says, then paste this again." Yellow }
+    else { Say "Nothing was changed; the watcher runs the code it had before this paste." Yellow }
+    return
+  }
 
-  # 7. Optional live check: yt-dlp only, never a paid step, nothing reported or filed.
+  # 7. Live check: yt-dlp only, never a paid step, nothing reported or filed.
   Say ""
   Say "..  live check: reading Hannah Fry's Short on this machine (yt-dlp only, free, about 3 minutes)" Yellow
   $tmp = Join-Path $env:TEMP ("cw-check-" + [guid]::NewGuid().ToString("N").Substring(0, 8))
@@ -143,6 +150,7 @@ print("first 300     :", data["words_text"][:300])
   Push-Location $repo
   try {
     $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    $env:PYTHONIOENCODING = "utf-8"  # the words may be in any script; the console must not crash printing them
     $probe | & $Py $PyVer - $tmp
     if ($LASTEXITCODE -ne 0) { Say "The live check could not read the Short here (the update itself is done)." Yellow }
     $ErrorActionPreference = $old
