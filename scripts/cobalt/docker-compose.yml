@@ -9,3 +9,16 @@ services:
       - "127.0.0.1:9000:9000"
     environment:
       API_URL: "http://localhost:9000/"
+      # YouTube's poToken and visitor_data come from the session generator below (cobalt docs/api-env-variables.md).
+      YOUTUBE_SESSION_SERVER: "http://yt-session-generator:8080/"
+      YOUTUBE_SESSION_INNERTUBE_CLIENT: "WEB_EMBEDDED"
+    depends_on:
+      - yt-session-generator
+
+  # cobalt's own helper for YouTube sessions (github.com/imputnet/yt-session-generator). It has to run on the same
+  # public address YouTube sees, which is why it sits here on the home computer. Reached by cobalt only; no port is
+  # published on the machine.
+  yt-session-generator:
+    image: ghcr.io/imputnet/yt-session-generator:webserver
+    init: true
+    restart: unless-stopped
