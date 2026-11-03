@@ -169,15 +169,57 @@ def cobalt_parts(data: dict) -> list[tuple[str, str]]:
     raise FetchFailed("other", "cobalt_no_media")
 
 
-def cobalt(url: str, platform: str, post_id: str | None, folder: Path, base_url: str, *, timeout: float = 60,
-           opener=None) -> Post:
+# The research's public test post (docs/FETCH_METHODS.md), asked for by `doctor` to prove cobalt fetches.
+COBALT_PROBE_URL = "https://www.tiktok.com/@scout2015/video/6718335390845095173"
+PROBE_READ_BYTES = 64 * 1024
+
+
+def _cobalt_request(url: str, base_url: str) -> urllib.request.Request:
+    """cobalt's POST / (docs/api.md): 720p at most, and never `local-processing`, which would hand back parts to
+    remux here instead of one file."""
     headers = {"Accept": "application/json", "Content-Type": "application/json", "User-Agent": BROWSER_UA}
     key = os.environ.get("COBALT_API_KEY")
     if key:
         headers["Authorization"] = f"Api-Key {key}"
-    body = {"url": url, "videoQuality": "720", "downloadMode": "auto", "filenameStyle": "basic"}
-    request = urllib.request.Request(base_url.rstrip("/") + "/", data=json.dumps(body).encode(), headers=headers,
-                                     method="POST")
-    media = cobalt_parts(_json(request, timeout=timeout, opener=opener, label="cobalt"))
+    body = {"url": url, "videoQuality": "720", "downloadMode": "auto", "filenameStyle": "basic",
+            "localProcessing": "disabled"}
+    return urllib.request.Request(base_url.rstrip("/") + "/", data=json.dumps(body).encode(), headers=headers,
+                                  method="POST")
+
+
+def cobalt(url: str, platform: str, post_id: str | None, folder: Path, base_url: str, *, timeout: float = 60,
+           opener=None) -> Post:
+    media = cobalt_parts(_json(_cobalt_request(url, base_url), timeout=timeout, opener=opener, label="cobalt"))
     post = Post(platform, url, post_id, method="cobalt")
     return _save(post, folder, media, opener)
+
+
+def cobalt_probe(base_url: str, *, timeout: float = 20, opener=None) -> str:
+    """Prove a cobalt instance fetches, not only that it answers: its `GET /` (not rate limited, names the version
+    and services), then one public TikTok, reading the first 64 KB of the file it hands back. Nothing is written.
+    Raises FetchFailed with the class of whatever missed."""
+    opener = opener or urllib.request.build_opener()
+    info = _json(urllib.request.Request(base_url.rstrip("/") + "/", headers={"Accept": "application/json",
+                                                                             "User-Agent": BROWSER_UA}),
+                 timeout=timeout, opener=opener, label="cobalt")
+    about = info.get("cobalt") if isinstance(info.get("cobalt"), dict) else {}
+    version = str(about.get("version") or "unknown version")
+    services = about.get("services")
+    if isinstance(services, list) and "tiktok" not in services:
+        raise FetchFailed("other", "cobalt_tiktok_disabled")
+    data = _json(_cobalt_request(COBALT_PROBE_URL, base_url), timeout=timeout, opener=opener, label="cobalt")
+    media = cobalt_parts(data)
+    try:
+        with opener.open(urllib.request.Request(media[0][0], headers={"User-Agent": BROWSER_UA}),
+                         timeout=timeout) as response:
+            first = response.read(PROBE_READ_BYTES)
+    except urllib.error.HTTPError as exc:
+        exc.close()
+        raise FetchFailed("blocked" if exc.code in (401, 403, 429) else "other", f"cobalt_file_http_{exc.code}") from None
+    except (socket.timeout, TimeoutError):
+        raise FetchFailed("timeout", "cobalt_file_timeout") from None
+    except urllib.error.URLError:
+        raise FetchFailed("other", "cobalt_file_unreachable") from None
+    if not first:
+        raise FetchFailed("other", "cobalt_file_empty")
+    return f"cobalt {version}: fetched a public TikTok ({data.get('status')}, {len(first) // 1024 or 1} KB read)"

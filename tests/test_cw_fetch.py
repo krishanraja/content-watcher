@@ -175,6 +175,53 @@ class FreeSiteTests(unittest.TestCase):
                 free_sites.cobalt_parts({"status": "error", "error": {"code": code}})
             self.assertEqual(failure.exception.status_class, expected, code)
 
+    def test_cobalt_probe_fetches_a_file(self):
+        info = b'{"cobalt": {"version": "11.5", "services": ["tiktok", "youtube"]}}'
+        answer = b'{"status": "tunnel", "url": "http://localhost:9000/tunnel?id=1", "filename": "t.mp4"}'
+        opener = FakeOpener({"http://localhost:9000/tunnel": b"x" * 70000,
+                             "http://localhost:9000/": lambda request: answer if request.data else info})
+        detail = free_sites.cobalt_probe("http://localhost:9000", opener=opener)
+        self.assertEqual(detail, "cobalt 11.5: fetched a public TikTok (tunnel, 64 KB read)")
+        sent = json.loads(opener.calls[1][1])
+        self.assertEqual((sent["url"], sent["localProcessing"]), (free_sites.COBALT_PROBE_URL, "disabled"))
+        self.assertIsNone(opener.calls[0][1])  # GET / first: the one route cobalt does not rate-limit
+
+    def test_cobalt_probe_names_each_miss(self):
+        info = b'{"cobalt": {"version": "11.5", "services": ["tiktok"]}}'
+        cases = (
+            ({"http://localhost:9000/": lambda r: b'{"status": "error", "error": {"code": "error.api.fetch.rate"}}' if r.data else info},
+             "blocked", "cobalt_rate"),
+            ({"http://localhost:9000/tunnel": b"",
+              "http://localhost:9000/": lambda r: b'{"status": "tunnel", "url": "http://localhost:9000/tunnel?id=1"}' if r.data else info},
+             "other", "cobalt_file_empty"),
+            ({"http://localhost:9000/": lambda r: b'{"status": "local-processing", "tunnel": ["a"]}' if r.data else info},
+             "other", "cobalt_no_media"),
+            ({"http://localhost:9000/": b'{"cobalt": {"version": "11.5", "services": ["youtube"]}}'}, "other", "cobalt_tiktok_disabled"),
+            ({"http://localhost:9000/": 403}, "blocked", "cobalt_refused"),
+        )
+        for routes, status_class, detail in cases:
+            with self.assertRaises(FetchFailed) as failure:
+                free_sites.cobalt_probe("http://localhost:9000", opener=FakeOpener(routes))
+            self.assertEqual((failure.exception.status_class, failure.exception.detail), (status_class, detail))
+
+    def test_doctor_cobalt_row(self):
+        from content_watcher import doctor
+
+        def row(config):
+            return next(r for r in doctor.checks(config) if r["check"] == "cobalt")
+
+        with mock.patch.object(free_sites, "cobalt_probe", return_value="cobalt 11.5: fetched a public TikTok (tunnel, 64 KB read)"):
+            ok = row(Config(cobalt_url="http://localhost:9000"))
+        self.assertTrue(ok["ok"])
+        self.assertIn("fetched a public TikTok", ok["detail"])
+        for missed, expected in ((FetchFailed("other", "cobalt_unreachable"), "is Docker running?"),
+                                 (FetchFailed("blocked", "cobalt_rate"), "could not fetch a public TikTok: blocked (cobalt_rate)")):
+            with mock.patch.object(free_sites, "cobalt_probe", side_effect=missed):
+                failed = row(Config(cobalt_url="http://localhost:9000"))
+            self.assertFalse(failed["ok"])
+            self.assertIn(expected, failed["detail"])
+        self.assertIn("not set up", row(Config(cobalt_url=""))["detail"])
+
     def test_cobalt_asks_for_720p(self):
         opener = FakeOpener({"http://localhost:9000/": b'{"status": "redirect", "url": "https://cdn.example/v.mp4", "filename": "v.mp4"}',
                              "https://cdn.example/v.mp4": b"video"})

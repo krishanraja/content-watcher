@@ -89,14 +89,15 @@ def checks(config: Config) -> list[dict]:
     add("poppler", bool(poppler), poppler or "missing: install Poppler (winget install oschwartz10612.Poppler)",
         "LinkedIn document posts (PDF pages)")
     if config.cobalt_url:
-        import urllib.request
+        from .fetch import free_sites
+        from .fetch.base import FetchFailed
         try:
-            with urllib.request.urlopen(config.cobalt_url, timeout=5) as response:
-                cobalt_ok = response.status < 500
-        except Exception:  # noqa: BLE001
-            cobalt_ok = False
-        add("cobalt", cobalt_ok, config.cobalt_url + ("" if cobalt_ok else " (not answering: is Docker running?)"),
-            "a free downloader for every platform")
+            add("cobalt", True, config.cobalt_url + ": " + free_sites.cobalt_probe(config.cobalt_url),
+                "a free downloader for every platform")
+        except FetchFailed as missed:
+            detail = (" (not answering: is Docker running?)" if missed.detail == "cobalt_unreachable" else
+                      f" answers but could not fetch a public TikTok: {missed.status_class} ({missed.detail})")
+            add("cobalt", False, config.cobalt_url + detail, "a free downloader for every platform")
     else:
         add("cobalt", False, "not set up (optional): scripts/cobalt/README.md", "a free downloader for every platform")
     deno = tools.tool_version("deno")

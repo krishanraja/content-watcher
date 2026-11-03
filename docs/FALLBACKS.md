@@ -47,7 +47,11 @@ Tested live on 2026-10-24 from a cloud machine with the research's public TikTok
 - **Tikmate** (TikTok): answered with the caption, author and counts; its download host sits on port 8443, which the
   cloud machine could not reach, so the download is unverified until the first run at home.
 - **cobalt's public instance**: refuses without a key (`error.api.auth.jwt.missing`), so the watcher uses a cobalt
-  run on the home computer (`scripts/cobalt/README.md`) or a hosted one with `COBALT_API_KEY`.
+  run on the home computer (`scripts/cobalt/README.md`) or a hosted one with `COBALT_API_KEY`. Since 2026-11-03
+  `content-watch doctor` proves the instance fetches: it reads cobalt's `GET /` (version and services), asks for the
+  research's public TikTok and reads the first 64 KB of the file, so `ok cobalt` means a working step. The watcher
+  always sends `localProcessing: disabled`, so cobalt hands back one file, never parts to remux. Not proven: cobalt's
+  YouTube, which needs a session server the compose file does not run.
 - **Instagram download sites** (snapinsta, saveig, sssinstagram, fastdl, igram, saveinsta): none answered a plain
   request; they hide the download step behind tokens their pages compute in the browser. Their sites are not called.
   But snapinsta's Apify actor (`snapinsta~instagram-downloader-api`, about $0.0004 a request) is a step since
