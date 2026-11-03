@@ -222,6 +222,20 @@ class FreeSiteTests(unittest.TestCase):
             self.assertIn(expected, failed["detail"])
         self.assertIn("not set up", row(Config(cobalt_url=""))["detail"])
 
+    def test_doctor_gallerydl_wants_the_tiktok_fix(self):
+        from content_watcher import doctor, tools
+
+        def row(found):
+            real = tools.tool_version
+            with mock.patch.object(tools, "tool_version", side_effect=lambda name: found if name == "gallery-dl" else real(name)), \
+                 mock.patch.object(free_sites, "cobalt_probe", return_value="ok"):
+                return next(r for r in doctor.checks(Config()) if r["check"] == "gallery-dl")
+
+        self.assertEqual((row("1.32.19")["ok"], row("1.32.19")["detail"]), (True, "1.32.19"))
+        old = row("1.32.17")
+        self.assertFalse(old["ok"])
+        self.assertIn("1.32.18", old["detail"])
+
     def test_cobalt_asks_for_720p(self):
         opener = FakeOpener({"http://localhost:9000/": b'{"status": "redirect", "url": "https://cdn.example/v.mp4", "filename": "v.mp4"}',
                              "https://cdn.example/v.mp4": b"video"})

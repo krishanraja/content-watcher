@@ -59,8 +59,10 @@ def checks(config: Config) -> list[dict]:
     add("yt-dlp", at_least(ytdlp, "2026.10.21"), ytdlp or "missing: install yt-dlp 2026.10.21 by hand (its changelog warns against the -U self-updater)",
         "Instagram reels, TikTok and YouTube videos")
     gallery = tools.tool_version("gallery-dl")
-    add("gallery-dl", at_least(gallery, "1.32.17"),
-        (gallery + " (TikTok's 403 fix is only on gallery-dl master, not in 1.32.17)") if gallery else "missing: pip install -U gallery-dl",
+    gallery_ok = at_least(gallery, "1.32.18")
+    add("gallery-dl", gallery_ok,
+        (gallery if gallery_ok else gallery + " (older than 1.32.18, which carries TikTok's 403 fix: pip install -U gallery-dl)")
+        if gallery else "missing: pip install -U gallery-dl",
         "TikTok photo posts and carousels")
     curl_cffi = _module_version("curl_cffi")
     add("curl_cffi", curl_cffi == "0.16.0", (curl_cffi + (" (pin 0.16.0: newer is blocked on TikTok)" if curl_cffi != "0.16.0" else "")) if curl_cffi else "missing: pip install curl_cffi==0.16.0",

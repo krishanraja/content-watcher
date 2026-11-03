@@ -10,7 +10,9 @@ optional: every chain works without it, it just has one more fallback with it. T
 4. Check: `content-watch doctor` shows `ok  cobalt` with its version. That line now means cobalt fetched a real public
    TikTok and handed back the file, not only that Docker answers; a miss names why (`blocked (cobalt_rate)` and so on).
 
-YouTube through cobalt needs its session server (`YOUTUBE_SESSION_SERVER` in cobalt's docs), which this compose file
-does not run, so for YouTube the watcher relies on yt-dlp with the bgutil token helper instead.
+For YouTube, cobalt needs a session (a poToken and visitor_data). The compose file also runs cobalt's own
+`yt-session-generator` beside it and points `YOUTUBE_SESSION_SERVER` at it; it only works from the address YouTube
+sees, which is why it runs here. yt-dlp with the bgutil token helper stays ahead of cobalt in YouTube's chain. Running
+the installer again (or `docker compose up -d` here) adds the generator to a machine that already has cobalt.
 
 The watcher asks cobalt for 720p at most. To stop it: `docker compose down` in this folder.
