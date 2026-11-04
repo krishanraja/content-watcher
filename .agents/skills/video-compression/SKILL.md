@@ -26,7 +26,7 @@ Run from the repository root with `python -m video_compression` or use the insta
 1. Run `python -m video_compression doctor` once for the machine.
 2. Run `probe` on the exact source and report duration, resolution, codecs, and size.
 3. Run `plan --purpose "..."` to choose a working hardware encoder when available, with a software fallback.
-4. Run `estimate --purpose "..."` before a long transcode. Tell the user that the range is sample-based, not a guarantee.
+4. Run `estimate --purpose "..."` before a long transcode. Tell the user that the range is a sample-based estimate with no guarantee.
 
 Use HEVC for small personal sharing when playback compatibility permits. Use H.264 for broad compatibility, email, social, and web delivery. Use AV1 only when the user values maximum compression over encode time and playback support.
 

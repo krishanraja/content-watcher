@@ -1,10 +1,12 @@
 # The watch API (content-engine routes this machine calls)
 
-Status: Current as designed on 2026-10-24; the routes are built in krishanraja/content-engine `apps/control-plane`
-and recorded as merged there (content-engine #161, 2026-10-24, per `NOW.md`; not re-read from this repository). No
-live call from a home computer has reached them yet. The client side is `content_watcher/engine.py`. The home
-computers hold only the engine key and reach the system through these three routes. Every call is `POST`, JSON, with
-`Authorization: Bearer <engine key>`.
+Status: Current. Designed on 2026-10-24; checked against krishanraja/content-engine `apps/control-plane/api/watch/`
+and `api/ux-feedback/` on 2026-11-04. The watch routes merged as content-engine #161 on 2026-10-24 (per `NOW.md`).
+Home computers have called them live since 2026-10-28, when Lorimer claimed two pasted links, filed and read one,
+and reported both (`docs/history/NOW-changes.md`). The client side is `content_watcher/engine.py`. The home computers
+hold no database key: they reach the system only through the routes below, with the engine key. Every call this
+package makes is `POST`, JSON, with `Authorization: Bearer <engine key>`; the two `GET` routes below are for the cloud
+backup's workflow.
 
 ## `POST /api/watch/claim`
 

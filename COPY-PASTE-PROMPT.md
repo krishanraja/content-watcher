@@ -2,7 +2,7 @@
 
 Copy the entire prompt below into a new ChatGPT Work task. It covers local setup, the compression conversation, optional content-aware clips, output verification, and the privacy-gated session learning loop.
 
-This prompt is for the Video Compression Engine only. The repository is now `krishanraja/content-watcher` (renamed from `video-compression` on 2026-10-24) and also holds Content Watcher, which this prompt does not use. The prompt below still names the old address, `krishanraja/video-compression`, because `tests/test_prompt_contract.py` requires that text and `video_compression/feedback.py` still defaults to it; GitHub should forward it to the new name (not re-checked). If a task cannot open the old address, use `https://github.com/krishanraja/content-watcher`.
+This prompt is for the Video Compression Engine only. The repository is now `krishanraja/content-watcher` (renamed from `video-compression` on 2026-10-24) and also holds Content Watcher, which this prompt does not use. The prompt below still names the old address, `krishanraja/video-compression`, because `tests/test_prompt_contract.py` requires that text and `video_compression/feedback.py` and the `feedback submit --repo` option in `video_compression/cli.py` still default to it; GitHub should forward it to the new name (not re-checked). If a task cannot open the old address, use `https://github.com/krishanraja/content-watcher`.
 
 ```text
 Use https://github.com/krishanraja/video-compression as the operating repository for this task.
@@ -22,7 +22,7 @@ Work locally and use the repository's Python CLI around FFmpeg. Do not upload th
 1. Run doctor to check FFmpeg and test real encoders on this machine.
 2. Probe the exact source and report its duration, resolution, codecs, and size.
 3. Plan the encode from my purpose, requested compatibility, quality, and any size cap. Prefer a working hardware encoder when appropriate and retain a software fallback.
-4. Run the representative-sample estimate before the full encode. Explain that its output-size range is an estimate, not a guarantee.
+4. Run the representative-sample estimate before the full encode. Explain that its output-size range is an estimate and carries no guarantee.
 5. If I requested cut suggestions, run analyze and actually inspect the available review proxy, audio, contact sheet, timeline, or transcript. State exactly which evidence you inspected. Never say you watched or listened to the video if you only inspected metadata, frames, silence, or text. Judge valuable segments against my stated purpose. For each suggestion, give start, end, title, reason, and confidence. Save accepted segments in a manifest matching docs/segments.schema.json and render them with cut.
 6. Compress the full video to the chosen local output folder. Preserve the source, never use the source path as the output, and do not overwrite an existing output unless I explicitly asked for that exact replacement.
 7. Keep full verification enabled. Probe the result, check its streams and duration, compare its size with the source, and decode the entire output. Treat a failed full decode as a failed deliverable.

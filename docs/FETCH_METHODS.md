@@ -10,27 +10,62 @@ accounts waits for his yes: D2 (brief section 3), a standing cap he sets with it
 the run. No step was run against a post he saved; the live tests that were run are named where they appear.
 "Unverified" and "inference" mean exactly that throughout.
 
-> **Status, 2026-10-27.** This is the research record of 2026-10-24, kept as evidence. Its "Recommended chain" and
-> "Do not build" lists are recommendations from before Krish asked for every fallback; the chains the code runs are in
-> `docs/FALLBACKS.md` and `content_watcher/fetch/__init__.py` (`_methods`), and where they differ the code wins.
-> Differences a reader would act on:
+> **Status, 2026-11-04.** This is the research record of 2026-10-24, kept as evidence. Its "Recommended chain" and
+> "Do not build" lists are recommendations from before Krish asked for every fallback. The chains the code runs are in
+> `content_watcher/fetch/__init__.py` (`_methods`, whose order `tests/test_cw_fetch.py` pins) and `docs/FALLBACKS.md`;
+> where they differ from this file, the code wins. Each platform section's "Recommended chain" opens with a note of
+> what the code runs. Differences a reader would act on:
 >
-> - D2 is answered ("Apify with $5 cap", `docs/DECISIONS.md`), so the "until D2 is answered" and "only once D2 says
->   Apify" gates below are open. One $5 monthly cap covers every Apify step on every platform
->   (`content_watcher/fetch/apify.py`, `allowed`). Steps that use his cookies are not run unless a Firefox profile is
->   set per platform with `content-watch config --cookies`.
+> - D1 and D2 are answered (`docs/DECISIONS.md`): fetched media is filed in his Drive, and Apify runs under one $5
+>   monthly cap ("Apify with $5 cap"). So the "waits on D1", "until D2 is answered" and "only once D2 says Apify"
+>   gates below are open. The one cap covers every Apify step on every platform (`content_watcher/fetch/apify.py`,
+>   `allowed`) and stands in for a yes before each run: the code asks nothing and prints no estimate. Each run's
+>   estimate goes into a local monthly ledger (`apify-spend.json`) before the call, and a run that would pass the cap
+>   is refused (`blocked:spend_cap_reached`).
+> - Cookies. Since 2026-10-28, on Instagram only, a home computer looks for a Firefox profile signed in to Instagram
+>   and fetches through gallery-dl with it, after the free steps and before Apify (D2's second ruling; `session.py`,
+>   `browser_sessions`). That is his own account, which answers the "which account" questions in both Instagram
+>   sections. On TikTok and YouTube a cookie step (yt-dlp with `--cookies-from-browser firefox:<profile>`) runs only
+>   when a profile is set by hand with `content-watch config --cookies <platform>=<profile>`. LinkedIn's chain has no
+>   cookie step.
 > - Instagram starts with its own embed player (`instagram_embed.py`, tested live 2026-10-24), which this file lists as
->   do not build, and the chains include Instaloader, cobalt, TikWM and Tikmate. Krish agreed to the free sites on
->   2026-10-24, which lifts the "only once Krish has agreed" hold on TikWM.
+>   do not build, and the chains include Instaloader, cobalt, TikWM, Tikmate and Jina Reader. Krish agreed to the free
+>   sites on 2026-10-24, and `docs/FALLBACKS.md` takes that as the go-ahead for TikWM ("only once Krish has agreed")
+>   and for Jina Reader, which the LinkedIn section said to ask him about first. Since 2026-10-28 an Instagram post or
+>   reel also has snapinsta's Apify downloader (`snapinsta~instagram-downloader-api`) after the scraper, for
+>   age-restricted posts; no section below names it.
+> - Versions. One install line serves every platform: the `watch` extra in `pyproject.toml` asks for
+>   `yt-dlp[default,deno]>=2026.10.21` with `curl_cffi==0.16.0` as its own pin, `gallery-dl>=1.32.18`,
+>   `instaloader==4.15.4`, `youtube-transcript-api==1.2.4`, `bgutil-ytdlp-pot-provider==2.0.2` and
+>   `faster-whisper==1.2.1`. The installer runs `pip install --upgrade`, so yt-dlp and gallery-dl take their newest
+>   release, and `doctor` checks yt-dlp is 2026.10.21 or later, gallery-dl 1.32.18 or later and curl_cffi exactly
+>   0.16.0. gallery-dl 1.32.18 (2026-10-25) carries TikTok's 403 fix (Codeberg #549), so TikTok no longer needs master.
+> - Classes. The code settled the scheme the sections leave open: every failure is one of six classes (`login_wall`,
+>   `not_found`, `too_big`, `blocked`, `timeout`, `other`; `fetch/base.py`) with a fixed detail name. A few proposed
+>   names became details (`apify_item_error`, `ig_missing_slides`, `li_doc_expired`, `li_login_only`); most did not.
+>   A spend outside the cap is `blocked:spend_not_approved` or `blocked:spend_cap_reached`.
+> - Apify calls. The code reads the token as `APIFY_TOKEN` or from Windows Credential Manager (`Mindmake/apify-token`),
+>   sends it in a Bearer header and calls `/v2/acts/<user>~<actor>/run-sync-get-dataset-items`; TikTok's run is
+>   started on `/runs` and polled. For a request a machine has claimed, the engine runs the actor instead
+>   (`POST /api/watch/apify`) when that machine has no key, its key is refused, or it is the cloud backup. The run-sync
+>   path has run live: on 2026-10-28 three runs of `apify~instagram-scraper` on his age-restricted carousel each came
+>   back as an error item (`login_wall`), and a test run of snapinsta's downloader returned all 16 slides.
 > - The code sends no `videoKvStoreIdOrName` on TikTok's Apify run, so no named store is left on his Apify account.
 >   Whether the actor then keeps the files in the run's own store (open question 6 below) has not been tested.
-> - Firecrawl, Gemini, ScrapeCreators and Supadata steps are not built.
-> - The YouTube and LinkedIn chains described here are built (#4) and covered by fixture tests; no fetch of either has
->   run on a home computer yet.
+> - GitHub Actions. Since 2026-10-28 the cloud backup (content-engine `.github/workflows/watch-cloud.yml`, machine
+>   `cloud-gh`) takes a link neither home computer claimed within 15 minutes and runs the same chain from its first
+>   step, with Apify through the engine under a $2 cap set on that machine. The "On GitHub Actions" rows below differ:
+>   the cloud backup tries the free steps first, yt-dlp on YouTube included.
+> - Firecrawl, Gemini, ScrapeCreators and Supadata steps are not built. Each section's note names the other steps the
+>   code does not run.
+> - Live runs. A YouTube Short went through the code's yt-dlp step on a home computer (Lorimer) on 2026-10-28, and a
+>   pasted Instagram reel was fetched and read on the Surface the same day. No LinkedIn fetch has run on a home
+>   computer yet. The YouTube and LinkedIn chains are also covered by fixture tests.
 
 ## Across all five
 
-These facts hold for more than one section. Each is stated once here; the sections carry the detail.
+These facts hold for more than one section. Each is stated once here; the sections carry the detail. They are the
+research's findings of 2026-10-24; the status note above says where the code has since settled them.
 
 **What D2 decides, per platform.** The brief frames D2 as his own session or Apify for Instagram and LinkedIn. For
 Instagram it opens the paid and logged-in steps, and the free logged-out steps run before he answers (both Instagram
@@ -55,6 +90,7 @@ differ by extra, and no section tested one install carrying both:
 - YouTube: `"yt-dlp[default,deno]==2026.10.21"` beside `"bgutil-ytdlp-pot-provider==2.0.2"`, updated before each batch
   and at least weekly with `python -m pip install -U "yt-dlp[default,deno]" bgutil-ytdlp-pot-provider`.
 - LinkedIn does not use yt-dlp.
+- What the code installs, in one line for every platform, is in the status note above.
 
 **gallery-dl: two pins, two trackers.** The Instagram sections use 1.32.17 (17 Oct 2026). TikTok runs master until the
 release after 1.32.17, because the fix for "Many posts return 403" (commit 912138b7ca, Codeberg #549, closed 2026-10-22)
@@ -62,7 +98,8 @@ is not in 1.32.17. No section says which one the home machine should run for bot
 Codeberg: new TikTok bugs are filed there, about half its issues are there, and mikf placed the Instagram profile-feed
 fix (#9829) in Codeberg PR 541, so watch Codeberg as well as GitHub. The brief's "eight gallery-dl releases between
 2026-09-12 and 2026-10-17" was six (1.32.12 to 1.32.17), and none of them fixed the Instagram single-post call, which
-with cookies has been the stable part.
+with cookies has been the stable part. Since 2026-11-03 the code asks for 1.32.18 or later, which carries the TikTok
+fix (status note above).
 
 **Cookies.** Never put a cookie for any platform on GitHub Actions, and never send one to a cloud actor (all five;
 LinkedIn rules out the one actor that runs his session cookie from Apify's servers, and YouTube never passes
@@ -192,6 +229,14 @@ connected account. A second reader then checked it, and every one of its correct
 was run against a live reel. "Unverified" and "inference" mean exactly that.
 
 ### Recommended chain
+
+> **What the code runs (`_methods`, checked 2026-11-04).** For a `/reel/` link: Instagram's embed player, yt-dlp
+> logged out (step 1, at 720p at most, without `--write-thumbnail`), Instaloader anonymous (step 4, moved before the
+> paid steps), cobalt when set up, his own signed-in Firefox session through gallery-dl (in place of step 3's yt-dlp
+> with a secondary account's cookies; it gives way after 3 minutes), `apify~instagram-reel-scraper` with the step 2
+> body, snapinsta's Apify downloader, then the cover picture and caption from the embed. The code runs no ffprobe check
+> on Instagram files and never fetches Apify's `audioUrl`, so a silent reel is filed and read as silent. Steps 5 and 6
+> are not built. The rest of this section is the research of 2026-10-24.
 
 **Before step 1, every time.**
 
@@ -513,6 +558,18 @@ This replaces brief section 6's carousel list, and its order differs. Brief sect
 `childPosts` holds every slide in order. That is untested (open question 1).
 
 ### Recommended chain
+
+> **What the code runs (`_methods`, checked 2026-11-04).** For a `/p/` link: Instagram's embed player, yt-dlp's
+> carousel mode logged out (step 2; fewer files than the playlist count is `ig_missing_slides`), Instaloader
+> anonymous, cobalt when set up, his own signed-in Firefox session through gallery-dl (step 1, moved after the free
+> steps, with `--write-metadata` and without `-o extractor.instagram.videos=merged`), `apify~instagram-scraper` (step
+> 3; a Sidecar whose `childPosts` and `images[]` differ in length is `ig_missing_slides`), snapinsta's Apify
+> downloader in place of memo23, then the cover picture and caption. Not built: the pixel-size check
+> (`ig_small_image`), memo23, the Playwright capture (step 4), the saved-collection poll and Business Discovery.
+> Answered since: open question 6 (his own account, D2's second ruling), and in part open question 10: asked with a
+> browser's navigation headers, the embed page gave every slide, the caption and the account from a cloud machine on
+> 2026-10-24 (`docs/FALLBACKS.md`), more than the "Logged-out embed page" row below expected. The rest of this section
+> is the research of 2026-10-24.
 
 **Before any step.**
 
@@ -840,6 +897,15 @@ reader then checked it. Every one of its corrections is applied below, and where
 used. Nothing here was run against a post Krish saved. "Unverified" and "inference" mean exactly that.
 
 ### Recommended chain
+
+> **What the code runs (`_methods`, checked 2026-11-04).** For a `/video/` link: yt-dlp (step 1, with
+> `--write-subs --sub-langs all,-live_chat`, at 720p at most; a file with no sound is `other:no_audio` and goes on),
+> gallery-dl 1.32.18 or later from PyPI (step 2, with `-o audio=true -o videos=true` and no covers), the page read
+> (3a), TikWM (3b, with `hd=0`), Tikmate, cobalt when set up, `clockworks~tiktok-video-scraper` (step 4, started and
+> polled, with covers off and no `videoKvStoreIdOrName`), then yt-dlp with Firefox cookies when a profile is set by
+> hand. That last step runs after Apify on any failure; step 6 keeps it for a login wall. A `/photo/` link skips the
+> first yt-dlp step and Tikmate. Not built: the second Apify actor, comments (step 5) and the browser-side capture. The
+> rest of this section is the research of 2026-10-24.
 
 **The gates, before anything runs.**
 
@@ -1262,6 +1328,18 @@ video, his call because section 7.3 and D3 say no model watches) and step 9 (Api
 downloaded MP4 is filed.
 
 ### Recommended chain
+
+> **What the code runs (`_methods`, checked 2026-11-04).** The oEmbed check (step 1: a 400 or 404 stops the link as
+> `not_found`, a 401 or 403 as `login_wall`), then one yt-dlp call that does steps 2 and 3 together: the video at
+> 720p at most with the original-language audio track, `--write-info-json`, and the `.*-orig` captions with `-t sleep`
+> (`ytdlp.py`). Then the same call as the mweb client, with PO tokens from the bgutil helper (the installer starts it
+> in Docker), cobalt when set up, yt-dlp with Firefox cookies when a profile is set by hand (step 6), for a Short
+> `marielise.dev~youtube-video-downloader` at 720p (step 9's file), and last the words alone, each filed as a text
+> card: youtube-transcript-api (step 4), then `johnvc~YoutubeTranscripts` (step 9's words). faster-whisper (step 5)
+> runs when the file is read, after the fetch. Not built: the 60-second subtitle retry, the runner's RSS metadata
+> (step 7), Gemini (step 8) and the backup actors. Answered since: open question 6 (Krish's `doctor` readback of
+> 2026-10-24 showed the bgutil helper and cobalt running in Docker on both home computers). The rest of this section is
+> the research of 2026-10-24.
 
 Rules for every step:
 
@@ -1703,6 +1781,15 @@ the chain. And for LinkedIn, D2 only decides the fallbacks and the login-only po
 public post needs neither his session nor Apify (inference from those tests).
 
 ### Recommended chain
+
+> **What the code runs (`_methods`, checked 2026-11-04).** Step 1 as described (`linkedin_page.py`), with one
+> `/embed/` GET after any failure but a 999; a document brings its PDF, else its page images. Then
+> `harvestapi~linkedin-profile-posts` (3a, with comments and reactions off), `supreme_coder~linkedin-post` (3b, run when
+> 3a fails or returns what looks like a video post with no file, so a text post is paid for once), then Jina Reader
+> (step 4, filed as a text card). Not built: the residential proxy (step 2), `apimaestro` (3c), the signed-in captures
+> (5b, 5c) and the rule that a 999 stops LinkedIn for the rest of the run, so each link starts at step 1. LinkedIn's
+> chain has no cookie step. No LinkedIn fetch has run on a home computer yet. The rest of this section is the research
+> of 2026-10-24.
 
 **The gates, before anything runs.**
 

@@ -1,9 +1,9 @@
 # Content Watcher
 
 Anything Krish points at, a link to a post or a file he drops, becomes a full text reading on his own machine, with no
-model watching it. Its readings feed the content engine, which is a makeyourmindup product, not a Mindmake one. This
-repository, `krishanraja/content-watcher` (renamed from `video-compression` on 2026-10-24), holds two things: Content
-Watcher (package `content_watcher`, command `content-watch`) and the Video Compression Engine below (package
+model watching it. Its readings feed the content engine, a makeyourmindup product. This repository,
+`krishanraja/content-watcher` (renamed from `video-compression` on 2026-10-24), holds two things: Content Watcher
+(package `content_watcher`, command `content-watch`) and the Video Compression Engine below (package
 `video_compression`, command `video-compress`). His own recordings need both. Where each stands right now:
 [`NOW.md`](NOW.md).
 
@@ -16,7 +16,7 @@ content-watch read path/to/video.mp4 --out readings      # read.json + read.md, 
 content-watch fetch "https://www.tiktok.com/@a/video/1" --out fetched
 content-watch timeline path/to/recording.mp4 --profile ux   # stills with what was said and shown at each; local only
 content-watch audio path/to/video.mp4                        # the audio track as its own file, ffmpeg only, no AI (--format wav --speech for Whisper)
-content-watch watch --once          # claim pasted links, fetch, file, read, report; then read new drops
+content-watch watch --once          # claim pasted links, fetch, file, read, report; then a feedback video if one waits; then new drops
 ```
 
 - What a reading holds: [`docs/READ_FORMAT.md`](docs/READ_FORMAT.md).
@@ -28,13 +28,15 @@ content-watch watch --once          # claim pasted links, fetch, file, read, rep
   `powershell -ExecutionPolicy Bypass -File scripts\install-content-watch.ps1 -ProductionInspo "<synced path>" -ContentInspo "<synced path>" -CheckOnly`,
   then without `-CheckOnly`. The two paths are the synced Drive folders Ventures > Inspiration > Production Inspo and
   Content Inspo; the installer needs both and reuses them from an earlier install.
+- Bring an installed computer up to main: paste `scripts/update-content-watch.ps1` into PowerShell. It pauses the
+  task, pulls main, runs the installer again and switches the task back on.
 
 Fetched media is filed into Drive > Ventures > Inspiration: Production Inspo or Content Inspo.
 
 Settings live in `%LOCALAPPDATA%\content-watcher\config.json` (`content-watch config --help`); keys are read from
 Windows Credential Manager (`Mindmake/engine-operator-token`, `Mindmake/apify-token`) and never printed. The log there
 carries counts and class names only. The `Mindmake/` key names and the scheduled task's name, `Mindmake Content Watcher`,
-stay as they are: both home computers find them by name (`NOW.md`, 2026-10-28).
+stay as they are: both home computers find them by name (`docs/history/NOW-changes.md`, 2026-10-28).
 
 ---
 
@@ -185,7 +187,7 @@ The engine does not pretend motion statistics understand meaning. `analyze` crea
 - `timeline.json` for black and silent ranges
 - `metadata.json` for technical facts
 
-The ChatGPT Work skill requires the agent to say what it actually inspected. Suggested clips must be based on spoken or visual content and the user's purpose, not merely scene changes or silence. Accepted suggestions use [the segment schema](docs/segments.schema.json).
+The ChatGPT Work skill requires the agent to say what it actually inspected. Suggested clips must rest on spoken or visual content and the user's purpose; scene changes and silence only help navigation. Accepted suggestions use [the segment schema](docs/segments.schema.json).
 
 ## Safety and output guarantees
 
@@ -203,5 +205,8 @@ python -m unittest discover -s tests -v
 ```
 
 The test suite includes a real synthetic-video flow when FFmpeg is installed.
+
+Two workflows run on every pull request and every push to main: `checks` (`scripts/check_paths.py` and
+`tests/test_layout.py`) and `windows` (`tests/test_cw_windowless.py` on a Windows runner). The full suite runs locally.
 
 Optional GitHub Actions templates for CI and feedback acknowledgement live in `examples/github-workflows`. They can be enabled by a repository owner whose GitHub token has workflow scope.

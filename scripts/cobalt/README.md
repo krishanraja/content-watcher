@@ -8,7 +8,7 @@ optional: every chain works without it, it just has one more fallback with it. T
 2. In this folder: `docker compose up -d`
 3. Tell the watcher: `content-watch config --cobalt-url http://localhost:9000`
 4. Check: `content-watch doctor` shows `ok  cobalt` with its version. That line now means cobalt fetched a real public
-   TikTok and handed back the file, not only that Docker answers; a miss names why (`blocked (cobalt_rate)` and so on).
+   TikTok and handed back the file (a running Docker alone does not earn it); a miss names why (`blocked (cobalt_rate)` and so on).
 
 For YouTube, cobalt needs a session (a poToken and visitor_data). The compose file also runs cobalt's own
 `yt-session-generator` beside it and points `YOUTUBE_SESSION_SERVER` at it; it only works from the address YouTube

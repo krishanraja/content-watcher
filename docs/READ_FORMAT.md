@@ -27,7 +27,7 @@ Readers: inspirationhouse tags cards from `read_md` and these top-level fields o
 | `heard_class` | string or null | Why, when not `words`: `no_audio_stream`, `digital_silence`, `no_speech`, `empty_audio`, `empty_captions`, `not_applicable` (an image or text), `no_whisper`, `decode_error`, `whisper_error`, `transcript_language_mismatch` (a video whose words are in another language than its screen text, even after transcribing the file's own audio: the words are withheld, see `words.language_check`). |
 | `words_text` | string | The plain transcript ("" when nothing was heard). |
 | `position` | object | `{ index, of }`: where this file sits in its post (fetched posts only). |
-| `unmeasured` | list | Measures this machine could not take, by name (`words`, `screen_text`, `faces`, `camera_moves`). Missing measures are named, never silently zero. |
+| `unmeasured` | list | Measures this machine could not take, by name (`words`, `screen_text`, `faces`, `camera_moves`, `timeline`, and for a PDF `document_text` or `document_pages`). Missing measures are named, never silently zero. |
 
 ## A video
 
@@ -59,6 +59,9 @@ is tagged from the first file. A TikTok photo post's sound is transcribed into t
 
 `text`: `body`, `word_count`, `paragraphs`, `first_line`, `list_lines`, `hashtags`. A LinkedIn post is filed as a
 Markdown file whose header lines (`Author:`, `Posted:`, `Link:`, `Platform:`) fill `post`.
+
+A document (a PDF, such as a LinkedIn document post's file): `document`: `page_count`, `text` (from `pdftotext`),
+`word_count`, and `pages`, the first 30 pages each read as a slide (above).
 
 ## The timeline (every video, from engine revision `cw-2026.10.29`)
 
@@ -121,10 +124,10 @@ inspirationhouse reads the folder by `drive_folder_id`; no permission was change
 ## What is not measured, honestly
 
 - Music versus speech is not classified; `sound_without_words_share` is the hint.
-- Layout labels are simple rules over OCR and face detection, not a picture model. A chart is not recognised.
+- Layout labels are simple rules over OCR and face detection, with no picture model. A chart is not recognised.
 - Words on screen come from sampled frames, so a caption shown for less than the gap between samples can be missed.
-- Timeline tags are rules, not a picture model: a still is not described in words beyond its OCR, colours, faces
-  and layout labels. UX signals are a small word list (`content_watcher/timeline/tags.py`), so sarcasm or a
+- Timeline tags are rules with no picture model behind them: a still is not described in words beyond its OCR,
+  colours, faces and layout labels. UX signals are a small word list (`content_watcher/timeline/tags.py`), so sarcasm or a
   problem described without its words is missed.
 - OCR reads dark text on light backgrounds best: light text on a coloured button, or a caption over a busy moving
   picture, can be missed.

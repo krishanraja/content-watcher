@@ -30,7 +30,7 @@ recording itself is never moved, changed or deleted.
 - The UX signals in time order (the `UX signals:` line), each with its time, the sentence and the still to open.
 - The moments where the screen changed with no words, and the longest stretch of words with no screen change:
   places he may have been stuck.
-- Say plainly that tags are rules over his words and the screen text, not a model's judgement of the screen. Open
+- Say plainly that tags are rules over his words and the screen text; no model judged the screen. Open
   the stills you cite before describing what they show; never describe a still you have not looked at.
 
 ## From Control Center

@@ -4,8 +4,8 @@ Written 2026-10-24 by the Claude Code session that built the Inspiration board's
 this repository. It is the brief for the whole build. Read it all before you write anything, then read the files it
 names. Where it says "check", check: this was true when it was written and parts of the system move every day.
 
-> **Status, 2026-10-27.** This brief is the starting point of the build, not its current state. Read it for the reasons;
-> read `NOW.md` for where things are. What has changed since it was written on 2026-10-24:
+> **Status, 2026-11-04.** This brief is the starting point of the build. Read it for the reasons; read `NOW.md` for
+> where things are now. What has changed since it was written on 2026-10-24:
 >
 > - The build is merged and installed on both home computers (`NOW.md`). `docs/FETCH_METHODS.md` replaced section 6
 >   the same day, and the chains the code actually runs are in `docs/FALLBACKS.md`. Where section 6 differs from
@@ -16,17 +16,21 @@ names. Where it says "check", check: this was true when it was written and parts
 >   still open: no answer is in the record, and `docs/NORTH_STAR.md` still carries the compression-only wording.
 > - The inspiration folders in D1 and section 4 are now Drive > Ventures > Inspiration: Production Inspo (was Video
 >   Engine > Inspiration) and Content Inspo (was Cold Ideas & Inspo).
-> - Section 7.4 asked for two engine routes; the build uses three (`docs/WATCH_API.md`).
+> - Section 7.1's command also has `timeline`, `audio` and `config` now (`README.md`).
+> - Section 7.4 asked for two engine routes; the build uses three (`claim`, `report`, `read`) and later added routes
+>   for the cloud backup, paid Apify runs through the engine and feedback videos (`docs/WATCH_API.md`).
 > - Section 8 describes what other sessions were building. Control Center's link box and inspirationhouse's reading of
 >   `content_reads` now exist in those repositories (control-center `docs/app/inspiration/README.md`, inspirationhouse
 >   `README.md`); read those for their state.
-> - 2026-10-28: the watcher's readings feed the content engine, which is a makeyourmindup product and not a Mindmake one (Ruling, Krish,
->   2026-10-28: "content-engine, which is not a mindmake product, it's a makeyourmindup product"). The `Mindmake/`
->   Credential Manager key in section 4 and the scheduled task's name stay, because both home computers find them by
->   name (`NOW.md`).
+> - 2026-10-28: the watcher's readings feed the content engine, a makeyourmindup product (Ruling, Krish, 2026-10-28:
+>   "content-engine, which is not a mindmake product, it's a makeyourmindup product"). The `Mindmake/` Credential
+>   Manager key in section 4 and the scheduled task's name stay, because both home computers find them by name
+>   (`docs/history/NOW-changes.md`, 2026-10-28).
 > - Section 10: steps 3 and 5 are built in this repository (the fetchers, the scheduled task and `doctor`), and step 4
->   is recorded as merged in content-engine (#161). Still open: the step 2 checkpoint, the live fetch per platform, and
->   the step 6 end-to-end run.
+>   is merged in content-engine (#161; the routes are in its `apps/control-plane/api/watch/`). On 2026-10-28 a home
+>   computer took a pasted YouTube Short to a card with its reading in five minutes, and another fetched, read and
+>   reported a pasted Instagram reel (`docs/history/NOW-changes.md`, `NOW.md`). Still open: the step 2 checkpoint, a
+>   live fetch of TikTok and LinkedIn on a home computer, and the step 6 run for every kind of post, with its number.
 
 ## 1. What Krish asked for
 

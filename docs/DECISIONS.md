@@ -34,13 +34,15 @@ From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the wo
   folders his own drops go to (videos into `Video Engine > Inspiration`, everything else into `Cold Ideas & Inspo`).
   **Ruling (Krish, 2026-10-24): "Yes to Drive filing".** `filing` now defaults to `drive`; the installer requires
   both synced folder paths and checks they exist. The watcher only adds files there: never deletes, never
-  overwrites, and the same post twice is a no-op. The first real write into his Drive still waits for his yes on the
-  live end-to-end run. (The two folders named in the guess above have since moved: see "The inspiration folders
-  moved to Ventures > Inspiration", below.)
+  overwrites, and the same post twice is a no-op. The first real write into his Drive came on the live run of
+  2026-10-28, when a YouTube Short he pasted was filed in Content Inspo (`docs/history/NOW-changes.md`). (The two
+  folders named in the guess above have since moved: see "The inspiration folders moved to Ventures > Inspiration",
+  below.)
 - **D2. How Instagram and LinkedIn are fetched** (his signed-in Firefox session, or Apify with a standing monthly cap).
   Asked 2026-10-24 with the best guess of Apify with a $5 cap. **Ruling (Krish, 2026-10-24): "Apify with $5 cap".**
   Apify runs only after the free methods fail, never with his accounts, and the local spend ledger stops it before a
-  run that would pass $5 in a calendar month. No cookies are used.
+  run that would pass $5 in a calendar month. At first no cookies were used; the ruling below changed that for
+  Instagram.
   **Ruling (Krish, 2026-10-28): "Yes to both on the two decisions"**, the second being "Should a home computer use
   your logged-in Instagram session (from Firefox) for posts like this one?" (his age-restricted carousel, which every
   logged-out route was refused), with "You need to get the local runner for working as well as Apify". So on the home
@@ -48,14 +50,15 @@ From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the wo
   cookie's host, name and expiry only, never its value) and gives that profile to gallery-dl, free, before any paid
   step. It only fetches the links he pasted; nothing signs in, posts, likes or follows. Each machine says once an hour
   whether it holds the session (`session.instagram.firefox` or `.none` in its counts). Apify stays the paid fallback.
-- **D3. The North Star for the renamed repository.** Open on 2026-10-27: no answer is in the record. It was to be
+- **D3. The North Star for the renamed repository.** Still open on 2026-11-04: no answer is in the record. It was to be
   asked after D2. `docs/NORTH_STAR.md` still holds the compression-only wording and number (set 2026-10-18, metric
   added 2026-10-23, both before the rename), and only Krish changes it. The wording proposed to him is in
   `docs/BRIEF.md` section 3.
 
 ## 2026-10-24: A separate route for hand-dropped readings
 
-Decision: readings of files with no request go through `POST /api/watch/read`, not folded into `report`.
+Decision: readings of files with no request go through their own route, `POST /api/watch/read`; `report` keeps to
+requests.
 
 Why: a drop has no request id, and `report`'s job is moving one request through its states. Spec in
 `docs/WATCH_API.md`.
@@ -68,11 +71,11 @@ the classes Control Center puts into words. The finer reason (for example `spend
 
 ## 2026-10-24: Who builds the engine routes
 
-Superseded the same day: **Ruling (Krish, 2026-10-24): "you build them"**. This session builds the three routes in
-content-engine. The earlier ruling, kept for the record, was **Ruling (Krish, 2026-10-24): "let Inspiration build
-the routes"**, under which The Inspiration session builds
-`POST /api/watch/claim`, `/api/watch/report` and `/api/watch/read` in content-engine exactly from `docs/WATCH_API.md`.
-this repository would have built only the client.
+Superseded the same day: **Ruling (Krish, 2026-10-24): "you build them"**. The session building Content Watcher built
+the three routes in content-engine. The earlier ruling, kept for the record, was **Ruling (Krish, 2026-10-24): "let
+Inspiration build the routes"**, under which the Inspiration session would have built `POST /api/watch/claim`,
+`/api/watch/report` and `/api/watch/read` in content-engine exactly from `docs/WATCH_API.md`, and this repository only
+the client.
 
 ## 2026-10-24: Every fallback, free sites included, and 720p is enough
 
@@ -82,9 +85,9 @@ lets me select the quality and whatnot. I never really need to download a high-q
 job."**
 
 So: every chain carries every working step from `docs/FETCH_METHODS.md`, plus the free downloader services that
-answered a live test (TikWM, Tikmate) and a self-hosted cobalt for every platform; downloads are capped at 720p; and
-when no file can be had, the words are filed as a text card. The chains and what was tested: `docs/FALLBACKS.md`.
-This is also his agreement to TikWM, which the research held back until he agreed.
+answered a live test (TikWM, Tikmate) and a self-hosted cobalt for every platform; video downloads ask for 720p or
+less wherever the step lets them choose; and when no file can be had, the words are filed as a text card. The
+chains and what was tested: `docs/FALLBACKS.md`. This is also his agreement to TikWM, which the research held back until he agreed.
 
 ## 2026-10-24: Instagram and YouTube Shorts come first
 
