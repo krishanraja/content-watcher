@@ -1,8 +1,8 @@
 ---
 repo: krishanraja/content-watcher
 product: Content Watcher
-as_of: 2026-10-29
-head: 2348567
+as_of: 2026-11-04
+head: 802c2e1
 lifecycle: beta
 production_url: none
 state_doc: README.md
@@ -24,12 +24,13 @@ Krish, and the systems that learn his taste. Posts he saves all day reach the co
 
 Its readings feed the content engine, which is a makeyourmindup product, not a Mindmake one (Ruling, Krish, 2026-10-28: "content-engine, which is not a mindmake product, it's a makeyourmindup product"). The heading above is the fleet's own wording, and it changes only through the docs steward.
 
-## Where it is right now (as of 2026-10-29)
+## Where it is right now (as of 2026-11-04)
 
 <!-- north-star-state {"week_of": "2026-10-26", "week_target": 25.0, "current": null, "current_as_of": null, "current_source": null, "urgency": 4, "urgency_reason": "not measured yet"} --> **North Star number: U4, far behind.** Share of the week's raw recordings compressed with their best clips cut, with no manual step: not measured yet, against 25% this week, on the way to 100% by 16 November 2026. A bold swing every day; work that does not move the number waits.
 
 Lifecycle: beta. Content Watcher is built, merged and installed on both home computers, but no pasted link has been followed end to end yet. The Video Compression Engine is published and unchanged since 2026-09-15 (`git log -- video_compression`). The detail is in `README.md`.
 
+- **Merged since 29 October** (`git log`): `content-watch audio` (#23); the one local layout, the taste backstop and the Machine stills sync (W2.11, W3.3, W3.2; #20 to #25); the original-language words for an auto-dubbed YouTube video (#26, #27); and `doctor` proving cobalt can fetch, with gallery-dl 1.32.18 and cobalt's YouTube session generator (#28). Each is in `docs/history/NOW-changes.md`. Not yet run on the home computers: the updater, and the re-read of the Hannah Fry Short that came back in Arabic.
 - **Built and on main** (`git log`, `content_watcher/`): the reading engine, the fetch chains for Instagram, TikTok, YouTube and LinkedIn (`docs/FALLBACKS.md`, `content_watcher/fetch/__init__.py`), the watch loop, `doctor`, and `scripts/install-content-watch.ps1`. Merged as #3, #4, #6, #7 and #8; the build branch is gone.
 - **Tests** (run 2026-10-29, `python3 -m unittest discover -s tests`, Linux container): 182 tests, all pass, 4 skipped (with W2.11 layout, W3.2 machine stills, the W3.3 backstop and `content-watch audio`). They use fixtures, fake responses and generated media; none reaches a platform. On 2026-10-28 the count was 133, and with faster-whisper, OpenCV and tesseract hidden, as on CI, all passed with 5 skipped.
 - **Tested live, from a cloud machine on 2026-10-24** (`docs/FALLBACKS.md`): Instagram's embed player on a reel, a three-video carousel and a photo post, with a full fetch and reading of the reel through `content-watch`; TikWM on a TikTok video and photo post. **Not tested live:** the YouTube and LinkedIn chains (built from the research in `docs/FETCH_METHODS.md`, fixture tests only), Tikmate's download, and any Apify run.
@@ -42,6 +43,7 @@ Each change, newest first, is in `docs/history/NOW-changes.md` (moved there verb
 
 ## What is next and what is waiting on Krish
 
+- Next (2026-11-04): on each home computer, run the updater (it upgrades gallery-dl and adds cobalt's YouTube session generator), then `content-watch doctor` and read the `cobalt` and `gallery-dl` lines (a miss names its class); then re-queue the Hannah Fry Short (wh3D5Zx6Prg) so `watch --once` reads its original English words.
 - **D1 answered** (2026-10-24, "Yes to Drive filing"): fetched media files into his two Drive folders. **D2 answered** ("Apify with $5 cap"). Both are in `docs/DECISIONS.md`.
 - **Waiting on Krish: D3**, the North Star for the renamed repository. `docs/NORTH_STAR.md` still holds the compression-only wording and number (set 2026-10-18, metric added 2026-10-23, both before the rename); no answer to D3 is in the record. The proposed wording is in `docs/BRIEF.md` section 3. Only Krish changes the North Star.
 - **Proved live on 28 October (this head, `2348567`):** on Surface a pasted Instagram reel, queued again at 08:27:43 UTC, was claimed, fetched, read with its words and reported by 08:29:09, with its one filed copy reused and nothing added to Drive. The YouTube file Krish shared, dropped in Content Inspo at 08:27:29, was read at 08:31:09 (140 s, words heard, 8 shots). Both computers run this head; neither holds a Firefox Instagram session (`session.instagram.none`), so an age-restricted post goes to the paid downloader, through the engine when a machine has no key of its own. content-engine's recordings pass now runs every console task of his with no window (Lorimer 7 of 7; Surface 4, with 3 installed with admin rights waiting on one admin run).
@@ -49,7 +51,7 @@ Each change, newest first, is in `docs/history/NOW-changes.md` (moved there verb
 - Checkpoint still open (brief section 10 step 2): read one real saved video from his Inspiration folder and compare its `read.md` token count with the taste ledger's eight 512px frames. Needs the home computer or his go-ahead to read one Drive file.
 - **W3.2 stills folder** (Krish's default, 2026-10-29): Drive > Ventures > Active Ventures > makeyourmindup > 4 Growth > Machine stills, id `1ryqrwjUloZwlKjn8UroVb6buwKIAPvwf`. A machine whose synced Drive has it files the stills there; inspirationhouse reads it by that id.
 - Measure the North Star number and record it on the first line under "Where it is right now".
-- North Star check (2026-10-29): recalibration proposed. The North Star still names only the compression engine, and this repository now also holds Content Watcher (D3 in `docs/DECISIONS.md`; the wording proposed to Krish is in `docs/BRIEF.md` section 3).
+- North Star check (2026-11-03): holds.
 
 ## Read next
 
