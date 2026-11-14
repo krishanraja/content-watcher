@@ -1,3 +1,0 @@
-Status: Content Watcher also runs on the worker server as machine `cloud-vps` (filing: engine), switched on 2026-11-14 at 21:14 UTC and running every minute like the home task; it backs up the home computers on the board's pasted links and, through a read-only, new-files-only Drive mirror switched on at 21:45 UTC, on drops in Production Inspo and Content Inspo. It holds no Apify key (CONTENT_WATCH_APIFY_VIA_ENGINE=1). The home computers' task is unchanged. Evidence: ai-harness state/vps/MIGRATION-2026-11-14.md.
-Next: the T+24h check (15 Nov) confirms cloud-vps claimed no request that waited under 15 minutes and that both machines never read one post twice.
-North Star check (2026-11-14): holds.
