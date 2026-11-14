@@ -14,7 +14,7 @@ This repository's North Star is [`docs/NORTH_STAR.md`](docs/NORTH_STAR.md): an a
 - Only Krish changes it.
 <!-- north-star:end -->
 
-**The content-watcher build (Krish, 2026-10-24).** This repository was renamed from video-compression to content-watcher, and Krish asked for it to be built out in full: fetching posts from TikTok, Instagram, YouTube and LinkedIn from a link he pastes, and reading any video, carousel or post into text on his own machine. That build is merged and installed on both of his home computers (`NOW.md` has what is verified and what is next). Before any work on it, read [`docs/BRIEF.md`](docs/BRIEF.md), which starts with three decisions only he makes: D1 and D2 are answered and D3 (the North Star) is still open, all in [`docs/DECISIONS.md`](docs/DECISIONS.md). The chains the code runs are in [`docs/FALLBACKS.md`](docs/FALLBACKS.md).
+**The content-watcher build (Krish, 2026-10-24).** This repository was renamed from video-compression to content-watcher, and Krish asked for it to be built out in full: fetching posts from TikTok, Instagram, YouTube and LinkedIn from a link he pastes, and reading any video, carousel or post into text on his own machine. That build is merged and installed on both of his home computers (`NOW.md` has what is verified and what is next). Before any work on it, read [`docs/BRIEF.md`](docs/BRIEF.md), which starts with three decisions only he makes: D1, D2 and D3 (the North Star, answered 2026-11-14) are all in [`docs/DECISIONS.md`](docs/DECISIONS.md). The chains the code runs are in [`docs/FALLBACKS.md`](docs/FALLBACKS.md).
 
 When a user asks to compress a video, including the phrase "Need to compress a video", use the repository skill at `.agents/skills/video-compression/SKILL.md`.
 
