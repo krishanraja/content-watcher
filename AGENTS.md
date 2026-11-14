@@ -31,3 +31,23 @@ Run tests with:
 ```sh
 python -m unittest discover -s tests -v
 ```
+
+## The worker: use it by default
+
+Krish has an always-on Linux server, **the worker** (`ssh worker`; x86 Ubuntu, 4 vCPU / 8 GB). This repository is
+installed there, so use it without being asked:
+
+- **Already on it?** If `hostname` prints `worker`, you are a Remote Control or Codex session on it, running as
+  `agent`. Clone into your own `~/work/content-watcher-<task>` folder and work there. `content-watch` is already on
+  your PATH; its installed copy is `~/apps/content-watcher` (pull it to update, never edit it in place).
+- **On Krish's laptop?** Edit locally, but send heavy steps (the full test suite, Whisper readings, `timeline` on long
+  recordings, long ffmpeg work) to the worker: `ssh worker offload <<'EOF'` … `EOF` runs as `agent` in `~/work` inside
+  the worker's CPU and memory budget. Clone or pull into `~/work/content-watcher-<task>` first; delete it when done.
+- **On a cloud session** (claude.ai/code, Codex cloud): the worker is unreachable, because outbound SSH is blocked
+  there. Say so; don't try.
+- **In the watch pipeline the worker is a backup, like `cloud-gh`.** It runs as machine `cloud-vps` with
+  `filing: "engine"`: a `cloud` machine may claim a request only after it has waited 15 minutes, and YouTube refuses
+  it. The home computers keep first claim; their scheduled task `Mindmake Content Watcher` stays as it is. Its own
+  schedule is switched on only by Krish's yes.
+- Never commit media, never hand-copy a key onto the worker (its secrets live in a root-only store), and never copy
+  `~/.codex/auth.json` anywhere.
