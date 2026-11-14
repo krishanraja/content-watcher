@@ -1,6 +1,6 @@
 # Every way the watcher tries to get a post
 
-Status: Current, 2026-10-24 (the chain table re-checked against `_methods` on 2026-10-27). Krish, 2026-10-24: "Build all the fallbacks. This needs to be bulletproof. There's got
+Status: Current, 2026-10-24 (the chain table re-checked against `_methods` on 2026-10-27 and 2026-11-14). Krish, 2026-10-24: "Build all the fallbacks. This needs to be bulletproof. There's got
 to be a tonne of ways to do this reliably. There are so many free sites out there that I just copy a link in, press
 download, and it lets me select the quality and whatnot. I never really need to download a high-quality video when I'm
 doing this job."
@@ -15,9 +15,9 @@ each step is `docs/FETCH_METHODS.md`.
 |---|---|
 | Instagram reel | Instagram's embed player, yt-dlp, Instaloader, cobalt (if set up), his signed-in Firefox session through gallery-dl (on a home computer that has one; 2026-10-28), Apify reel scraper, Apify downloader (`snapinsta~instagram-downloader-api`, for age-restricted posts), then the cover picture and caption as a last resort |
 | Instagram post or carousel | Instagram's embed player, yt-dlp carousel mode, Instaloader, cobalt, his signed-in Firefox session through gallery-dl, Apify post scraper, Apify downloader (age-restricted posts), then the cover picture and caption |
-| TikTok video | yt-dlp (a file with no sound moves on), gallery-dl, the post page, TikWM, Tikmate, cobalt, Apify |
+| TikTok video | yt-dlp (a file with no sound moves on), gallery-dl, the post page, TikWM, Tikmate, cobalt, Apify, then his signed-in Firefox session through yt-dlp (on a home computer that has one) |
 | TikTok photo post | gallery-dl, the post page, TikWM, cobalt, Apify |
-| YouTube | oEmbed check (a removed or private video stops here), yt-dlp with Deno and the bgutil token helper, yt-dlp as the mobile client, cobalt, for a Short the Apify downloader (about $0.02), then words only: youtube-transcript-api, Apify transcripts |
+| YouTube | oEmbed check (a removed or private video stops here), yt-dlp with Deno and the bgutil token helper, yt-dlp as the mobile client, cobalt, his signed-in Firefox session through yt-dlp (on a home computer that has one), for a Short the Apify downloader (about $0.02), then words only: youtube-transcript-api, Apify transcripts |
 | LinkedIn | the public post page (with one embed retry; document posts bring their PDF or page images), Apify harvestapi, Apify supreme_coder, then words only: Jina Reader |
 
 ## Instagram and YouTube Shorts, the two that matter most
