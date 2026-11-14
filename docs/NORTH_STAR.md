@@ -2,33 +2,29 @@
 
 Status: Current
 Owner: Krish Raja
-Last verified: 2026-10-18
+Last verified: 2026-11-14
 
-> By 18 November 2026, any raw recording (a keynote, a podcast, a room) goes in and comes out compressed with its best clips already cut, ready for the content engine, without leaving the machine.
+> Anything Krish points at, a link or a file, becomes a full text reading on his own machine and a card that asks why he likes it, with no model watching it.
 
-Set by Krish on 18 October 2026. It is not reached yet. It is what every session in this repository works toward.
+Set by Krish on 14 November 2026, his yes to D3 in `docs/DECISIONS.md`. It replaces the compression-only North Star set on 18 October 2026, before the rename. It is not reached yet. It is what every session in this repository works toward.
 
 ## The number
 
-**Share of the week's raw recordings compressed with their best clips cut, with no manual step**: 100% by 16 November 2026, on a linear weekly ladder. Checkpoints: 16 Nov 2026: 100%.
+**Share of links he pastes that become a card with a full reading within 15 minutes, with no manual step**: target 100%. Baseline 16 of 23 (70%), all time to 14 November 2026. Krish set no deadline; the target holds every week from the week of his yes.
 
 ```yaml north-star-metric
-metric: "Share of the week's raw recordings compressed with their best clips cut, with no manual step"
+metric: "Share of links he pastes that become a card with a full reading within 15 minutes, with no manual step"
 unit: %
 direction: up
 target: 100
-deadline: 2026-11-16
 ladder_shape: linear
-source: "The engine's run log against the week's recordings"
+source: "Control Center content_watch_requests joined to content_reads on read_id: links pasted this ISO week, at least 15 minutes old, read within 15 minutes of the paste (a reused reading counts as on time)"
 status: active
 ladder:
-  - [2026-10-26, 25.0]
-  - [2026-11-02, 50.0]
-  - [2026-11-09, 75.0]
-  - [2026-11-16, 100.0]
+  - [2026-11-09, 100.0]
 ```
 
-Urgency (U1 to U5) is worked out every week from where the number stands against that week's target, by [the harness contract](https://github.com/krishanraja/ai-harness/blob/main/contract/north-star-metric.md). Set by Krish on 23 October 2026.
+Measured every morning by Control Center (`READERS['content-watcher']` in its `api/_northStarRefresh.ts`), which writes the state line in `NOW.md`. A week with no link pasted is unknown, never zero. Urgency (U1 to U5) is worked out from where the number stands against that week's target, by [the harness contract](https://github.com/krishanraja/ai-harness/blob/main/contract/north-star-metric.md).
 
 ## How to use it
 

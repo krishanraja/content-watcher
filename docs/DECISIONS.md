@@ -26,7 +26,7 @@ Why: A pasted GitHub link can point the agent to public instructions but cannot 
 
 Rejected alternative: Rely on a short link plus a vague opening request. That makes the behavior client-dependent and is especially likely to lose the end-of-session learning loop.
 
-## 2026-10-24: Content Watcher decisions only Krish makes (D1 and D2 answered, D3 open)
+## 2026-10-24: Content Watcher decisions only Krish makes (D1, D2 and D3 answered)
 
 From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the work most first.
 
@@ -48,7 +48,14 @@ From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the wo
   cookie's host, name and expiry only, never its value) and gives that profile to gallery-dl, free, before any paid
   step. It only fetches the links he pasted; nothing signs in, posts, likes or follows. Each machine says once an hour
   whether it holds the session (`session.instagram.firefox` or `.none` in its counts). Apify stays the paid fallback.
-- **D3. The North Star for the renamed repository.** Open on 2026-10-27: no answer is in the record. It was to be
+- **D3. The North Star for the renamed repository.** **Ruling (Krish, 2026-11-14): yes** (his words, answering
+  the 14 Nov fleet decision list, item 4.11: "I agree with everything else until Batch 6"; recorded in Control
+  Center `docs/audits/2026-11-14-fleet-integration/KRISH-ANSWERS.md`). The North Star is now the wording below and
+  its number is the share of links he pastes that become a card with a full reading within 15 minutes, with no
+  manual step, target 100%, baseline 16 of 23 (70%). `docs/NORTH_STAR.md` holds it; Control Center reads it daily
+  (`READERS['content-watcher']`). He set no deadline. The record as it stood before his answer:
+
+  Open on 2026-10-27: no answer is in the record. It was to be
   asked after D2. `docs/NORTH_STAR.md` still holds the compression-only wording and number (set 2026-10-18, metric
   added 2026-10-23, both before the rename), and only Krish changes it. The wording proposed to him is in
   `docs/BRIEF.md` section 3.
