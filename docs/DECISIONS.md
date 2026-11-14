@@ -53,6 +53,23 @@ From `docs/BRIEF.md` section 3, asked one at a time, the one that changes the wo
   added 2026-10-23, both before the rename), and only Krish changes it. The wording proposed to him is in
   `docs/BRIEF.md` section 3.
 
+  **Prepared for Krish (2026-11-14), so it costs one word.** The question: "Replace the North Star with this,
+  yes or no? *Anything Krish points at, a link or a file, becomes a full text reading on his own machine and a card
+  that asks why he likes it, with no model watching it.* Number: share of links he pastes that become a full reading
+  within 15 minutes, with no manual step; target 100%." A yes changes `docs/NORTH_STAR.md` (his ruling in the
+  commit); a no keeps the compression wording, whose number has no source and whose deadline is 16 November.
+  - Source: Supabase project Mindmaker OS, `public.content_watch_requests` (one row per pasted link: `requested_at`,
+    `status`, `read_id`) joined to `public.content_reads` (`id`, `created_at`) on `read_id = id`. Both exist; checked
+    read-only on 2026-11-14 (shapes and counts only).
+  - The measure: of the requests in the window whose `requested_at` is at least 15 minutes old, the share with
+    `status = 'read'` and a reading created within 15 minutes of `requested_at`. A reused reading (created before
+    the request) counts as on time.
+  - Baseline, all time to 2026-11-14: 23 requests (27 Oct to 12 Nov), 18 read, 16 of them within 15 minutes, 5
+    failed (all on 5 Nov): 70%. `content_reads` holds 65 readings, drops included.
+  - Measured automatically: Control Center's morning refresh (`READERS` in `api/_northStarRefresh.ts`) runs the
+    query above for the current ISO week and writes the state line in `NOW.md`. The reader is a patch for
+    Control Center, which this repository cannot push to.
+
 ## 2026-10-24: A separate route for hand-dropped readings
 
 Decision: readings of files with no request go through `POST /api/watch/read`, not folded into `report`.
