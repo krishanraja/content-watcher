@@ -18,3 +18,49 @@ jobs:
           python-version: "3.12"
       - run: python scripts/check_paths.py
       - run: python -m unittest tests.test_layout -v
+  fold:
+    # A closeout note (now-notes/YYYY-MM-DD-<slug>.md) that reaches main is folded into NOW.md and removed,
+    # so pull requests never edit NOW.md at once (Ruling, Krish, 2026-10-28) and NOW.md never goes stale
+    # behind its notes. The fold is ai-harness's own closeout hook (`--fold`), read from its main at run
+    # time: this repository is not one the harness publisher administers, so it keeps no copy of it.
+    # Every attempt folds afresh from the newest main. A push by this job starts no other workflow.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    concurrency:
+      group: closeout-fold
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: krishanraja/ai-harness
+          ref: main
+          path: .harness
+          sparse-checkout: .claude/hooks/harness-closeout.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Fold closeout notes into NOW.md
+        run: |
+          set -uo pipefail
+          hook="$RUNNER_TEMP/harness-closeout.mjs"
+          cp .harness/.claude/hooks/harness-closeout.mjs "$hook" && rm -rf .harness
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch --quiet origin "$GITHUB_REF_NAME" && git reset --quiet --hard "origin/$GITHUB_REF_NAME" || exit 1
+            if ! ls now-notes/*.md >/dev/null 2>&1; then echo "No closeout notes to fold."; exit 0; fi
+            status=0; node "$hook" --fold || status=$?
+            if [ -z "$(git status --porcelain -- NOW.md now-notes)" ]; then exit "$status"; fi
+            git add -A -- NOW.md now-notes
+            git commit --quiet -m "docs(closeout): fold closeout notes into NOW.md" -m "Written by ai-harness's .claude/hooks/harness-closeout.mjs --fold, run by this repository's checks.yml."
+            if git push --quiet origin "HEAD:$GITHUB_REF_NAME"; then exit "$status"; fi
+            sleep $((attempt * 5))
+          done
+          echo "::error::Main kept moving; the notes stay in now-notes/ for the next push to main."
+          exit 1
