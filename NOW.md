@@ -30,6 +30,7 @@ Its readings feed the content engine, which is a makeyourmindup product, not a M
 
 Lifecycle: beta. Content Watcher is built, merged and installed on both home computers, and pasted links are followed end to end: 18 of 23 requests in `content_watch_requests` reached `read` between 27 October and 12 November (Supabase, read-only count, 2026-11-14). The Video Compression Engine is published and unchanged since 2026-09-15 (`git log -- video_compression`). The detail is in `README.md`.
 
+- Camoufox evaluated as a browser adapter and not adopted, nothing installed (`docs/CAMOUFOX.md`): no miss in the record is one a browser would fix, and its one addition, getting past bot detection, would get round the platforms' stated restrictions. (2026-11-15)
 - the branch sweep takes an approved list (branch@sha) on a hand run and deletes each named branch only at that exact commit, skipping and logging anything else; the weekly run is unchanged. Copied from ai-harness's canonical script and workflow. (2026-11-15)
 - A weekly branch sweep (`.github/workflows/branch-sweep.yml`, Sunday 03:17 UTC, and by hand) deletes every remote branch whose work is already on main and lists each branch it keeps with why: unmerged work, an open pull request, protected (Ruling, Krish, 2026-11-15). The script is `.github/scripts/branch_sweep.py`, copied unchanged from ai-harness, which holds the canonical copy. (2026-11-15)
 - the worker (cloud-vps) is first for every content-watcher task: it claims each pasted link at once and reads every dropped file; the home computers are its 15-minute backup and read no dropped file; YouTube links go to the home computers, since YouTube refuses the worker (content-engine #709 decides it on the server). (2026-11-15)
@@ -52,7 +53,7 @@ Each change, newest first, is in `docs/history/NOW-changes.md` (moved there verb
 
 ## What is next and what is waiting on Krish
 
-- Next (2026-11-15): run the sweep by hand with dry_run false and this repository's approved list, and read its log.
+- Next (2026-11-15): read pasted Google Drive and Docs links through the engine's own Drive access, the cause of all 5 failures in the record.
 - **D1 answered** (2026-10-24, "Yes to Drive filing"): fetched media files into his two Drive folders. **D2 answered** ("Apify with $5 cap"). Both are in `docs/DECISIONS.md`.
 - **Proved live on 28 October (head `2348567`):** on Surface a pasted Instagram reel, queued again at 08:27:43 UTC, was claimed, fetched, read with its words and reported by 08:29:09, with its one filed copy reused and nothing added to Drive. The YouTube file Krish shared, dropped in Content Inspo at 08:27:29, was read at 08:31:09 (140 s, words heard, 8 shots). Both computers run this head; neither holds a Firefox Instagram session (`session.instagram.none`), so an age-restricted post goes to the paid downloader, through the engine when a machine has no key of its own. content-engine's recordings pass now runs every console task of his with no window (Lorimer 7 of 7; Surface 4, with 3 installed with admin rights waiting on one admin run).
 - Checkpoint still open (brief section 10 step 2): read one real saved video from his Inspiration folder and compare its `read.md` token count with the taste ledger's eight 512px frames. Needs the home computer or his go-ahead to read one Drive file.
