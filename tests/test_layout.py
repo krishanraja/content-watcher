@@ -126,6 +126,11 @@ class NowCapTests(unittest.TestCase):
         size = len((ROOT / "NOW.md").read_bytes())
         self.assertLessEqual(size, NOW_CAP, "move the oldest of NOW.md to docs/history/NOW-changes.md")
 
+    def test_the_fold_holds_now_md_to_this_cap(self):
+        workflow = (ROOT / ".github" / "workflows" / "checks.yml").read_text(encoding="utf-8")
+        self.assertIn(f"--now-cap {NOW_CAP} --history docs/history/NOW-changes.md", workflow,
+                      "checks.yml's fold must trim NOW.md to the cap this test enforces")
+
     def test_history_lives_in_docs_history(self):
         history = (ROOT / "docs" / "history" / "NOW-changes.md").read_text(encoding="utf-8")
         self.assertIn("- 2026-10-24 **Content Watcher, first build**", history)
