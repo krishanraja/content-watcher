@@ -45,10 +45,12 @@ installed there, so use it without being asked:
   the worker's CPU and memory budget. Clone or pull into `~/work/content-watcher-<task>` first; delete it when done.
 - **On a cloud session** (claude.ai/code, Codex cloud): the worker is unreachable, because outbound SSH is blocked
   there. Say so; don't try.
-- **In the watch pipeline the worker is a backup, like `cloud-gh`.** It runs as machine `cloud-vps` with
-  `filing: "engine"`: a `cloud` machine may claim a request only after it has waited 15 minutes, and YouTube refuses
-  it. The home computers keep first claim; their scheduled task `Mindmake Content Watcher` stays as it is. Its own
-  schedule is switched on only by Krish's yes.
+- **In the watch pipeline the worker goes first** (Ruling, Krish, 2026-11-15: "I just need that every content watcher
+  and music watcher task automatically goes to the worker in the VPS"). It runs as machine `cloud-vps` with
+  `filing: "engine"` and claims every pasted link at once and reads every dropped file. The home computers are its
+  backup: they take a link only after it has waited 15 minutes with nobody on it, and read no dropped file. YouTube
+  refuses the worker's address, so a YouTube link goes to the home computers at once. The rule is content-engine's
+  (`api/watch/_watch.ts`, `claimableNow` and `heldReads`), so no machine's own settings decide it.
 - Never commit media, never hand-copy a key onto the worker (its secrets live in a root-only store), and never copy
   `~/.codex/auth.json` anywhere.
 
