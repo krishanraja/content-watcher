@@ -30,7 +30,8 @@ Krish, 2026-10-24: "Instagram and YouTube Shorts are the main ones, you need to 
   2026-10-24 from a cloud machine, where the normal reel page sends a logged-out visitor to the login page: a reel
   (video with sound, caption, account, likes, comments and views), a three-video carousel (all three, in order) and a
   photo post, then a full fetch and reading of the reel through `content-watch`. It needs a browser's navigation
-  headers; if the data ever stops coming, the same page opens in a headless browser. The one thing it cannot give is a
+  headers; if the data ever stops coming, the same page opens in a headless browser (Playwright's Chromium; Camoufox
+  was evaluated for this on 2026-11-15 and not adopted, `docs/CAMOUFOX.md`). The one thing it cannot give is a
   reel with licensed music ("Watch on Instagram"): that goes on to yt-dlp, Instaloader, cobalt and Apify, which does
   handle it, and if every step misses, the cover picture and caption still make a card.
 - **YouTube Shorts: the home connection, set up properly, then a paid backstop.** YouTube refuses cloud machines
