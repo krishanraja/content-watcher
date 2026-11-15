@@ -1,7 +1,7 @@
 ---
 repo: krishanraja/content-watcher
 product: Content Watcher
-as_of: 2026-11-14
+as_of: 2026-11-15
 head: ef7b665
 lifecycle: beta
 production_url: none
@@ -24,12 +24,13 @@ Krish, and the systems that learn his taste. Posts he saves all day reach the co
 
 Its readings feed the content engine, which is a makeyourmindup product, not a Mindmake one (Ruling, Krish, 2026-10-28: "content-engine, which is not a mindmake product, it's a makeyourmindup product"). The heading above is the fleet's own wording, and it changes only through the docs steward.
 
-## Where it is right now (as of 2026-11-14)
+## Where it is right now (as of 2026-11-15)
 
 <!-- north-star-state {"week_of":"2026-11-09","week_target":100,"current":100,"current_as_of":"2026-11-14","current_source":"Control Center content_watch_requests joined to content_reads, this ISO week: 4 of 4 on time","urgency":1,"urgency_reason":"at 100% of this week's target"} --> **North Star number: U1, on pace.** Share of links he pastes that become a card with a full reading within 15 minutes, with no manual step: 100%, against 100% this week. Steady, and one proposal a week that would raise the ceiling.
 
 Lifecycle: beta. Content Watcher is built, merged and installed on both home computers, and pasted links are followed end to end: 18 of 23 requests in `content_watch_requests` reached `read` between 27 October and 12 November (Supabase, read-only count, 2026-11-14). The Video Compression Engine is published and unchanged since 2026-09-15 (`git log -- video_compression`). The detail is in `README.md`.
 
+- the worker (cloud-vps) is first for every content-watcher task: it claims each pasted link at once and reads every dropped file; the home computers are its 15-minute backup and read no dropped file; YouTube links go to the home computers, since YouTube refuses the worker (content-engine #709 decides it on the server). (2026-11-15)
 - Content Watcher also runs on the worker server as machine `cloud-vps` (filing: engine), switched on 2026-11-14 at 21:14 UTC and running every minute like the home task; it backs up the home computers on the board's pasted links and, through a read-only, new-files-only Drive mirror switched on at 21:45 UTC, on drops in Production Inspo and Content Inspo. It holds no Apify key (CONTENT_WATCH_APIFY_VIA_ENGINE=1). The home computers' task is unchanged. Evidence: ai-harness state/vps/MIGRATION-2026-11-14.md. (2026-11-14)
 - Krish said yes to D3 (Ruling, Krish, 2026-11-14). `docs/NORTH_STAR.md` holds the new North Star and its number block: the share of links he pastes that become a card with a full reading within 15 minutes, with no manual step, target 100%, baseline 16 of 23 (70%), no deadline set. `docs/DECISIONS.md` records his yes. Control Center reads the number each morning (`READERS['content-watcher']`, control-center #875); this ISO week reads 4 of 4 on time. (2026-11-14)
 - D3 answered yes (Ruling, Krish, 2026-11-14): the North Star is now the share of links he pastes that become a card with a full reading within 15 minutes, with no manual step, target 100%, baseline 16 of 23 (70%) (`docs/NORTH_STAR.md`, `docs/DECISIONS.md`). Control Center reads it each morning (`READERS['content-watcher']`); this ISO week reads 4 of 4 on time (Supabase, read-only, 2026-11-14). (2026-11-14)
@@ -49,13 +50,13 @@ Each change, newest first, is in `docs/history/NOW-changes.md` (moved there verb
 
 ## What is next and what is waiting on Krish
 
-- Next (2026-11-14): the T+24h check (15 Nov) confirms cloud-vps claimed no request that waited under 15 minutes and that both machines never read one post twice.
+- Next (2026-11-15): the first link pasted after content-engine #709 deploys shows claimed_by cloud-vps within a minute.
 - **D1 answered** (2026-10-24, "Yes to Drive filing"): fetched media files into his two Drive folders. **D2 answered** ("Apify with $5 cap"). Both are in `docs/DECISIONS.md`.
 - **Proved live on 28 October (head `2348567`):** on Surface a pasted Instagram reel, queued again at 08:27:43 UTC, was claimed, fetched, read with its words and reported by 08:29:09, with its one filed copy reused and nothing added to Drive. The YouTube file Krish shared, dropped in Content Inspo at 08:27:29, was read at 08:31:09 (140 s, words heard, 8 shots). Both computers run this head; neither holds a Firefox Instagram session (`session.instagram.none`), so an age-restricted post goes to the paid downloader, through the engine when a machine has no key of its own. content-engine's recordings pass now runs every console task of his with no window (Lorimer 7 of 7; Surface 4, with 3 installed with admin rights waiting on one admin run).
 - Checkpoint still open (brief section 10 step 2): read one real saved video from his Inspiration folder and compare its `read.md` token count with the taste ledger's eight 512px frames. Needs the home computer or his go-ahead to read one Drive file.
 - **W3.2 stills folder** (Krish's default, 2026-10-29): Drive > Ventures > Active Ventures > makeyourmindup > 4 Growth > Machine stills, id `1ryqrwjUloZwlKjn8UroVb6buwKIAPvwf`. A machine whose synced Drive has it files the stills there; inspirationhouse reads it by that id.
 - Measure the North Star number and record it on the first line under "Where it is right now".
-- North Star check (2026-11-14): holds.
+- North Star check (2026-11-15): holds.
 
 ## Read next
 
