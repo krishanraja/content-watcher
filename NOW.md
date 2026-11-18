@@ -26,7 +26,7 @@ Its readings feed the content engine, which is a makeyourmindup product, not a M
 
 ## Where it is right now (as of 2026-11-15)
 
-<!-- north-star-state {"week_of":"2026-11-09","week_target":100,"current":100,"current_as_of":"2026-11-14","current_source":"Control Center content_watch_requests joined to content_reads, this ISO week: 4 of 4 on time","urgency":1,"urgency_reason":"at 100% of this week's target"} --> **North Star number: U1, on pace.** Share of links he pastes that become a card with a full reading within 15 minutes, with no manual step: 100%, against 100% this week. Steady, and one proposal a week that would raise the ceiling.
+<!-- north-star-state {"week_of":"2026-11-09","week_target":100,"current":75,"current_as_of":"2026-11-18","current_source":"Control Center content_watch_requests joined to content_reads on read_id: links pasted this ISO week, at least 15 minutes old, read within 15 minutes of the paste, read by Control Center","urgency":2,"urgency_reason":"at 75% of this week's target"} --> **North Star number: U2, behind.** Share of links he pastes that become a card with a full reading within 15 minutes, with no manual step: 75%, against 100% this week. The number leads every session.
 
 Lifecycle: beta. Content Watcher is built, merged and installed on both home computers, and pasted links are followed end to end: 18 of 23 requests in `content_watch_requests` reached `read` between 27 October and 12 November (Supabase, read-only count, 2026-11-14). The Video Compression Engine is published and unchanged since 2026-09-15 (`git log -- video_compression`). The detail is in `README.md`.
 
