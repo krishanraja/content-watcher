@@ -54,7 +54,7 @@ installed there, so use it without being asked:
 - Never commit media, never hand-copy a key onto the worker (its secrets live in a root-only store), and never copy
   `~/.codex/auth.json` anywhere.
 
-<!-- krish-canon:start release=v2026.11.24.7 sha=f0538f159cc8 rendered=2026-11-25 -->
+<!-- krish-canon:start release=v2026.11.25.2 sha=478570da4e8c rendered=2026-11-26 -->
 ## Krish canon
 
 Rendered from `krishanraja/ai-harness`; the start marker names the last release that changed this block, not the latest release. Nothing inside these
@@ -108,7 +108,7 @@ in the harness. What he works on is live, never copied here; read it from Contro
 https://controlcenter.krishraja.com/api/canon/KRISH.md (and `PORTFOLIO.md` beside it).
 
 **Where the rest lives.** The operating contract, the routing contract and the
-34 curated skills are in `krishanraja/ai-harness`. On a machine with the harness installed the same skills are under the user skills root, and the local copy is
+35 curated skills are in `krishanraja/ai-harness`. On a machine with the harness installed the same skills are under the user skills root, and the local copy is
 authoritative for reading; the repository is authoritative for what is correct. Where none is installed (claude.ai, a cloud session), read each skill live with Control Center `get_skill`.
 
 **This repository's own rules:** `AGENTS.md`, `docs/BRIEF.md`
